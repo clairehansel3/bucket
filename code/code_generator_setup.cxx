@@ -4,6 +4,7 @@
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/exception.hpp>
 #include <boost/graph/topological_sort.hpp>
+#include <boost/polymorphic_pointer_cast.hpp>
 #include <cassert>
 #include <iterator>
 #include <llvm/IR/DerivedTypes.h>
@@ -35,7 +36,7 @@ sym::Class* CodeGeneratorSetup::lookupClass(const ast::Expression* expression) c
     auto entry = m_symbol_table.lookup(identifier->value);
     if (!entry)
       throw std::runtime_error("undefined symbol");
-    auto cls = dynamic_cast<sym::Class*>(entry);
+    auto cls = sym::sym_cast<sym::Class*>(entry);
     if (!cls)
       throw std::runtime_error("not a class");
     return cls;
@@ -72,7 +73,7 @@ void CodeGeneratorSetup::initializeClasses(const ast::Class* cls) {
 }
 
 void CodeGeneratorSetup::initializeFieldsAndMethods(const ast::Class* cls) {
-  auto composite = static_cast<sym::CompositeClass*>(m_symbol_table.lookup(cls->name));
+  auto composite = boost::polymorphic_pointer_downcast<sym::CompositeClass>(m_symbol_table.lookupKnown(cls->name));
   m_symbol_table.pushScope(cls->name);
   for (auto& global : cls->body) {
     if (auto inner_class = ast::ast_cast<const ast::Class*>(global.get())) {
@@ -80,7 +81,7 @@ void CodeGeneratorSetup::initializeFieldsAndMethods(const ast::Class* cls) {
     } else if (auto field = ast::ast_cast<const ast::Field*>(global.get())) {
       composite->fields().push_back(m_symbol_table.createField(field->name, lookupClass(field->cls.get())));
     } else {
-      auto method = ast::checked_ast_cast<const ast::Method*>(global.get());
+      auto method = boost::polymorphic_pointer_downcast<const ast::Method>(global.get());
       std::vector<sym::Class*> argument_classes{method->args.size()};
       for (std::vector<sym::Class*>::size_type i = 0; i != argument_classes.size(); ++i)
         argument_classes[i] = lookupClass(method->args[i].second.get());
@@ -97,12 +98,12 @@ void CodeGeneratorSetup::resolveComposites() {
   Graph graph;
   BiMap table;
   for (auto entry : m_symbol_table)
-    if (auto composite = dynamic_cast<sym::CompositeClass*>(entry))
+    if (auto composite = sym::sym_cast<sym::CompositeClass*>(entry))
       table.insert(BiMap::value_type(composite, boost::add_vertex(graph)));
   for (auto entry : m_symbol_table) {
-    if (auto field = dynamic_cast<sym::Field*>(entry)) {
+    if (auto field = sym::sym_cast<sym::Field*>(entry)) {
       auto parent = m_symbol_table.getParentClass(field);
-      if (auto field_composite = dynamic_cast<sym::CompositeClass*>(field->classof()))
+      if (auto field_composite = sym::sym_cast<sym::CompositeClass*>(field->classof()))
         boost::add_edge(table.left.find(parent)->second, table.left.find(field_composite)->second, graph);
     }
   }
@@ -127,7 +128,7 @@ void CodeGeneratorSetup::resolveComposite(sym::CompositeClass* composite) {
 
 void CodeGeneratorSetup::resolveMethods() {
   for (auto entry : m_symbol_table) {
-    if (auto method = dynamic_cast<sym::Method*>(entry)) {
+    if (auto method = sym::sym_cast<sym::Method*>(entry)) {
       if (!method->function()) {
         std::vector<llvm::Type*> argument_types{method->argumentClasses().size() + 1};
         argument_types[0] = m_symbol_table.getReferenceClass(m_symbol_table.getParentClass(method))->type();

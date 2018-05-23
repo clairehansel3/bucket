@@ -89,9 +89,9 @@ Entry* SymbolTable::lookup(std::string_view shortname) const {
   return lookupInScope(scope, shortname);
 }
 
-Entry* SymbolTable::lookupKnown(std::string_view shortname) const {
+Entry* SymbolTable::lookupKnown(std::string_view name) const {
   std::string lookup_name{m_active_scope};
-  lookup_name += shortname;
+  lookup_name += name;
   auto iter = m_entry_map.find(lookup_name);
   assert(iter != m_entry_map.end());
   return iter->second.get();

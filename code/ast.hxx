@@ -201,19 +201,6 @@ ToPtr ast_cast(FromPtr ptr)
   return nullptr;
 }
 
-template <typename ToPtr, typename FromPtr>
-ToPtr checked_ast_cast(FromPtr ptr)
-{
-  static_assert(std::is_pointer_v<ToPtr>);
-  static_assert(std::is_pointer_v<FromPtr>);
-  using To   = std::remove_pointer_t<ToPtr>;
-  using From = std::remove_pointer_t<FromPtr>;
-  static_assert(std::is_base_of_v<Node, To>);
-  static_assert(std::is_base_of_v<Node, From>);
-  assert(dynamic_cast<ToPtr>(ptr));
-  return static_cast<ToPtr>(ptr);
-}
-
 void dump(Node* node);
 
 }

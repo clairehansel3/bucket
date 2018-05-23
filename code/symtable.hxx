@@ -178,7 +178,7 @@ public:
   iterator begin();
   iterator end();
   Entry* lookup(std::string_view shortname) const;
-  Entry* lookupKnown(std::string_view shortname) const;
+  Entry* lookupKnown(std::string_view name) const;
   Entry* lookupInScope(std::string_view scope, std::string_view shortname) const;
   Entry* lookupExact(std::string_view fullname) const;
   CompositeClass* getParentClass(Entry* entry) const;

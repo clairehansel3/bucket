@@ -1,4 +1,5 @@
 #include "codegen.hxx"
+#include <boost/polymorphic_pointer_cast.hpp>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/ADT/Twine.h>
 #include <llvm/IR/IRPrintingPasses.h>
@@ -39,7 +40,7 @@ void CodeGenerator::visit(ast::Class* cls) {
 }
 
 void CodeGenerator::visit(ast::Method* method) {
-  m_method = static_cast<sym::Method*>(m_symbol_table.lookup(method->name));
+  m_method = boost::polymorphic_pointer_downcast<sym::Method>(m_symbol_table.lookupKnown(method->name));
   assert(m_method);
   m_builder.SetInsertPoint(llvm::BasicBlock::Create(m_context, "$entry", m_method->function()));
   m_symbol_table.pushAnonymousScope();
@@ -226,7 +227,7 @@ void CodeGenerator::visit(ast::Assignment* assignment) {
   auto result = m_symbol_table.lookup(lhs->value);
   sym::Variable* variable;
   if (result) {
-    variable = dynamic_cast<sym::Variable*>(result);
+    variable = sym::sym_cast<sym::Variable*>(result);
     if (!variable) {
       throw std::runtime_error("assigning to something other than a variable");
     }
@@ -245,7 +246,7 @@ void CodeGenerator::visit(ast::Call* call) {
     auto found = m_symbol_table.lookupInScope(m_expr_class->fullname(), call->name);
     if (!found)
       throw std::runtime_error("unknown method");
-    auto method = dynamic_cast<sym::Method*>(found);
+    auto method = sym::sym_cast<sym::Method*>(found);
     if (!method)
       throw std::runtime_error("not a method");
     if (method->argumentClasses().size() != call->args.size())
@@ -277,18 +278,18 @@ void CodeGenerator::visit(ast::Identifier* identifier) {
   auto entry = m_symbol_table.lookup(identifier->value);
   if (!entry)
     throw std::runtime_error("unknown identifier");
-  if (auto variable = dynamic_cast<sym::Variable*>(entry)) {
+  if (auto variable = sym::sym_cast<sym::Variable*>(entry)) {
     m_expr_class = variable->classof();
     m_value = m_builder.CreateLoad(variable->value());
   }
-  else if (auto cls = dynamic_cast<sym::Class*>(entry)) {
+  else if (auto cls = sym::sym_cast<sym::Class*>(entry)) {
     m_expr_class = cls;
     m_value = nullptr;
   }
-  else if (auto field = dynamic_cast<sym::Field*>(entry))
+  else if (auto field = sym::sym_cast<sym::Field*>(entry))
     throw std::runtime_error("identifier refers to field");
   else {
-    assert(dynamic_cast<sym::Method*>(entry));
+    assert(sym::sym_cast<sym::Method*>(entry));
     throw std::runtime_error("identifier refers to method");
   }
 }
@@ -312,20 +313,10 @@ void CodeGenerator::finalize() {
     auto function_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(m_context), argument_types, false);
     actual_main = llvm::Function::Create(function_type, llvm::Function::ExternalLinkage, "main", &m_module);
   }
-  sym::CompositeClass* module_cls;
-  {
-    auto entry = m_symbol_table.lookupExact(".__module__");
-    assert(entry && dynamic_cast<sym::CompositeClass*>(entry));
-    module_cls = static_cast<sym::CompositeClass*>(entry);
-  }
-  sym::Method* module_main;
-  {
-    auto entry = m_symbol_table.lookupExact(".__module__.main");
-    assert(entry && dynamic_cast<sym::Method*>(entry));
-    module_main = static_cast<sym::Method*>(entry);
-    assert(module_main->returnClass() == m_bool);
-    assert(module_main->argumentClasses().size() == 0);
-  }
+  auto module_cls = boost::polymorphic_pointer_downcast<sym::CompositeClass>(m_symbol_table.lookupKnown("__module__"));
+  auto module_main = boost::polymorphic_pointer_downcast<sym::Method>(m_symbol_table.lookupKnown("__module__.main"));
+  assert(module_main->returnClass() == m_bool);
+  assert(module_main->argumentClasses().size() == 0);
   m_builder.SetInsertPoint(llvm::BasicBlock::Create(m_context, "$entry", actual_main));
   auto alloca_inst = m_builder.CreateAlloca(module_cls->type(), 0, nullptr, "main");
   std::vector<llvm::Value*> args;
