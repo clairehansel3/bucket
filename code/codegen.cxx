@@ -26,7 +26,7 @@ void CodeGenerator::print() {
 sym::Variable* CodeGenerator::createAllocaVariable(std::string_view name, sym::Class* cls) {
   auto variable = m_symbol_table.createVariable(name, cls);
   llvm::IRBuilder<> temporary_ir_builder{&m_method->function()->getEntryBlock(), m_method->function()->getEntryBlock().begin()};
-  auto alloca_inst = temporary_ir_builder.CreateAlloca(cls->type(), 0, nullptr, llvm::StringRef(variable->name().data(), variable->name().size()));
+  auto alloca_inst = temporary_ir_builder.CreateAlloca(cls->type(), 0, nullptr, llvm::StringRef(variable->fullname().data(), variable->fullname().size()));
   variable->setValue(alloca_inst);
   return variable;
 }
@@ -51,7 +51,7 @@ void CodeGenerator::visit(ast::Method* method) {
     auto arg_cls_iter = m_method->argumentClasses().begin();
     auto arg_cls_end = m_method->argumentClasses().end();
 
-    auto this_variable = createAllocaVariable("this", m_symbol_table.getParent(m_method)->pointer());
+    auto this_variable = createAllocaVariable("this", m_symbol_table.getReferenceClass(m_symbol_table.getParentClass(m_method)));
     m_builder.CreateStore(llvm_arg_iter, this_variable->value());
     ++llvm_arg_iter;
 
@@ -230,7 +230,7 @@ void CodeGenerator::visit(ast::Assignment* assignment) {
     if (!variable) {
       throw std::runtime_error("assigning to something other than a variable");
     }
-    if (variable->cls() != m_expr_class)
+    if (variable->classof() != m_expr_class)
       throw std::runtime_error("assignment type error");
   }
   else
@@ -239,10 +239,10 @@ void CodeGenerator::visit(ast::Assignment* assignment) {
 }
 
 void CodeGenerator::visit(ast::Call* call) {
-  m_symbol_table.showSymbols();
+  m_symbol_table.print();
   call->object->receive(this);
   if (!m_value) {
-    auto found = m_symbol_table.lookup(m_expr_class->name(), call->name);
+    auto found = m_symbol_table.lookupInScope(m_expr_class->fullname(), call->name);
     if (!found)
       throw std::runtime_error("unknown method");
     auto method = dynamic_cast<sym::Method*>(found);
@@ -278,7 +278,7 @@ void CodeGenerator::visit(ast::Identifier* identifier) {
   if (!entry)
     throw std::runtime_error("unknown identifier");
   if (auto variable = dynamic_cast<sym::Variable*>(entry)) {
-    m_expr_class = variable->cls();
+    m_expr_class = variable->classof();
     m_value = m_builder.CreateLoad(variable->value());
   }
   else if (auto cls = dynamic_cast<sym::Class*>(entry)) {
@@ -312,15 +312,15 @@ void CodeGenerator::finalize() {
     auto function_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(m_context), argument_types, false);
     actual_main = llvm::Function::Create(function_type, llvm::Function::ExternalLinkage, "main", &m_module);
   }
-  sym::Composite* module_cls;
+  sym::CompositeClass* module_cls;
   {
-    auto entry = m_symbol_table.lookup("", "__module__");
-    assert(entry && dynamic_cast<sym::Composite*>(entry));
-    module_cls = static_cast<sym::Composite*>(entry);
+    auto entry = m_symbol_table.lookupExact(".__module__");
+    assert(entry && dynamic_cast<sym::CompositeClass*>(entry));
+    module_cls = static_cast<sym::CompositeClass*>(entry);
   }
   sym::Method* module_main;
   {
-    auto entry = m_symbol_table.lookup(".__module__", "main");
+    auto entry = m_symbol_table.lookupExact(".__module__.main");
     assert(entry && dynamic_cast<sym::Method*>(entry));
     module_main = static_cast<sym::Method*>(entry);
     assert(module_main->returnClass() == m_bool);

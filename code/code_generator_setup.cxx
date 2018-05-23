@@ -12,7 +12,7 @@
 #include <stdexcept>
 
 void CodeGeneratorSetup::showSymbols() {
-  m_symbol_table.showSymbols();
+  m_symbol_table.print();
 }
 
 CodeGeneratorSetup::CodeGeneratorSetup()
@@ -28,7 +28,6 @@ void CodeGeneratorSetup::setup(ast::Class* cls) {
   initializeFieldsAndMethods(cls);
   resolveComposites();
   resolveMethods();
-  declareBuiltins();
 }
 
 sym::Class* CodeGeneratorSetup::lookupClass(const ast::Expression* expression) const {
@@ -49,10 +48,22 @@ void CodeGeneratorSetup::initializeBuiltins() {
   m_bool = m_symbol_table.createClass("bool", llvm::IntegerType::getInt1Ty(m_context));
   m_int = m_symbol_table.createClass("int", llvm::IntegerType::getInt64Ty(m_context));
   m_void = m_symbol_table.createClass("void", llvm::Type::getVoidTy(m_context));
+  {
+    auto method = m_symbol_table.createMethod("foo", std::vector<sym::Class*>(), m_void);
+    method->setFunction(llvm::Function::Create(llvm::FunctionType::get(llvm::Type::getVoidTy(m_context), false), llvm::Function::ExternalLinkage, "foo", &m_module));
+  }
+  {
+    std::vector<llvm::Type*> args;
+    std::vector<sym::Class*> argc;
+    args.push_back(m_int->type());
+    argc.push_back(m_int);
+    auto method = m_symbol_table.createMethod("print_integer", std::move(argc), m_void);
+    method->setFunction(llvm::Function::Create(llvm::FunctionType::get(llvm::Type::getVoidTy(m_context), std::move(args), false), llvm::Function::ExternalLinkage, "print_integer", &m_module));
+  }
 }
 
 void CodeGeneratorSetup::initializeClasses(const ast::Class* cls) {
-  m_symbol_table.createComposite(cls->name);
+  m_symbol_table.createCompositeClass(cls->name);
   m_symbol_table.pushScope(cls->name);
   for (auto& global : cls->body)
     if (auto inner_class = ast::ast_cast<const ast::Class*>(global.get()))
@@ -61,7 +72,7 @@ void CodeGeneratorSetup::initializeClasses(const ast::Class* cls) {
 }
 
 void CodeGeneratorSetup::initializeFieldsAndMethods(const ast::Class* cls) {
-  auto composite = static_cast<sym::Composite*>(m_symbol_table.lookup(cls->name));
+  auto composite = static_cast<sym::CompositeClass*>(m_symbol_table.lookup(cls->name));
   m_symbol_table.pushScope(cls->name);
   for (auto& global : cls->body) {
     if (auto inner_class = ast::ast_cast<const ast::Class*>(global.get())) {
@@ -82,20 +93,19 @@ void CodeGeneratorSetup::initializeFieldsAndMethods(const ast::Class* cls) {
 
 void CodeGeneratorSetup::resolveComposites() {
   using Graph = boost::adjacency_list<>;
-  using BiMap = boost::bimap<sym::Composite*, Graph::vertex_descriptor>;
+  using BiMap = boost::bimap<sym::CompositeClass*, Graph::vertex_descriptor>;
   Graph graph;
   BiMap table;
-  m_symbol_table.forEachEntry([&graph, &table](sym::Entry* entry){
-    if (auto composite = dynamic_cast<sym::Composite*>(entry))
+  for (auto entry : m_symbol_table)
+    if (auto composite = dynamic_cast<sym::CompositeClass*>(entry))
       table.insert(BiMap::value_type(composite, boost::add_vertex(graph)));
-  });
-  m_symbol_table.forEachEntry([this, &graph, &table](sym::Entry* entry){
+  for (auto entry : m_symbol_table) {
     if (auto field = dynamic_cast<sym::Field*>(entry)) {
-      auto parent = m_symbol_table.getParent(field);
-      if (auto field_composite = dynamic_cast<sym::Composite*>(field->cls()))
+      auto parent = m_symbol_table.getParentClass(field);
+      if (auto field_composite = dynamic_cast<sym::CompositeClass*>(field->classof()))
         boost::add_edge(table.left.find(parent)->second, table.left.find(field_composite)->second, graph);
     }
-  });
+  }
   std::vector<Graph::vertex_descriptor> result;
   try {
     boost::topological_sort(graph, std::back_inserter(result));
@@ -106,44 +116,26 @@ void CodeGeneratorSetup::resolveComposites() {
     resolveComposite(table.right.find(*iter)->second);
 }
 
-void CodeGeneratorSetup::resolveComposite(sym::Composite* composite) {
+void CodeGeneratorSetup::resolveComposite(sym::CompositeClass* composite) {
   std::vector<llvm::Type*> llvm_types{composite->fields().size()};
   for (std::vector<llvm::Type*>::size_type i = 0; i != llvm_types.size(); ++i) {
-    assert(composite->fields()[i]->cls()->type());
-    llvm_types[i] = composite->fields()[i]->cls()->type();
+    assert(composite->fields()[i]->classof()->type());
+    llvm_types[i] = composite->fields()[i]->classof()->type();
   }
   composite->setType(llvm::StructType::create(m_context, llvm_types));
 }
 
 void CodeGeneratorSetup::resolveMethods() {
-  m_symbol_table.forEachEntry([this](sym::Entry* entry){
+  for (auto entry : m_symbol_table) {
     if (auto method = dynamic_cast<sym::Method*>(entry)) {
-      std::vector<llvm::Type*> argument_types{method->argumentClasses().size() + 1};
-      argument_types[0] = m_symbol_table.getParent(method)->type()->getPointerTo();
-      for (std::vector<llvm::Type*>::size_type i = 0; i != method->argumentClasses().size(); ++i)
-        argument_types[i + 1] = method->argumentClasses()[i]->type();
-      auto function_type = llvm::FunctionType::get(method->returnClass()->type(), argument_types, false);
-      method->setFunction(llvm::Function::Create(function_type, llvm::Function::ExternalLinkage, llvm::StringRef(method->name().data(), method->name().size()), &m_module));
+      if (!method->function()) {
+        std::vector<llvm::Type*> argument_types{method->argumentClasses().size() + 1};
+        argument_types[0] = m_symbol_table.getReferenceClass(m_symbol_table.getParentClass(method))->type();
+        for (std::vector<llvm::Type*>::size_type i = 0; i != method->argumentClasses().size(); ++i)
+          argument_types[i + 1] = method->argumentClasses()[i]->type();
+        auto function_type = llvm::FunctionType::get(method->returnClass()->type(), argument_types, false);
+        method->setFunction(llvm::Function::Create(function_type, llvm::Function::ExternalLinkage, llvm::StringRef(method->fullname().data(), method->fullname().size()), &m_module));
+      }
     }
-  });
-}
-
-void CodeGeneratorSetup::declareBuiltins() {
-  {
-  std::vector<llvm::Type*> args;
-  auto ft = llvm::FunctionType::get(llvm::Type::getVoidTy(m_context), args, false);
-  auto f = llvm::Function::Create(ft, llvm::Function::ExternalLinkage, "foo", &m_module);
-  auto method = m_symbol_table.createMethod(".__module__.", "foo", std::vector<sym::Class*>(), m_void);
-  method->setFunction(f);
-  }
-  {
-  std::vector<llvm::Type*> args;
-  std::vector<sym::Class*> argc;
-  args.push_back(m_int->type());
-  argc.push_back(m_int);
-  auto ft = llvm::FunctionType::get(llvm::Type::getVoidTy(m_context), std::move(args), false);
-  auto f = llvm::Function::Create(ft, llvm::Function::ExternalLinkage, "print_integer", &m_module);
-  auto method = m_symbol_table.createMethod(".__module__.", "print_integer", std::move(argc), m_void);
-  method->setFunction(f);
   }
 }

@@ -31,9 +31,8 @@ private:
   void initializeClasses(const ast::Class* cls);
   void initializeFieldsAndMethods(const ast::Class* cls);
   void resolveComposites();
-  void resolveComposite(sym::Composite* cls);
+  void resolveComposite(sym::CompositeClass* cls);
   void resolveMethods();
-  void declareBuiltins();
 };
 
 #endif

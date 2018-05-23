@@ -138,7 +138,7 @@ Class* SymbolTable::getReferenceClass(Class* cls) {
   std::string reference_class_name{cls->fullname()};
   reference_class_name += '*';
   if (auto reference_class_pointer = lookupExact(reference_class_name)) {
-    assert(sym_cast<CompositeClass*>(reference_class_pointer));
+    assert(sym_cast<Class*>(reference_class_pointer));
     return static_cast<Class*>(reference_class_pointer);
   }
   auto reference_class_unique_pointer = std::unique_ptr<Class>(new Class{std::move(reference_class_name), cls->type()->getPointerTo()});
