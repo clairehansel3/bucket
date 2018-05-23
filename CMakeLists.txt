@@ -17,7 +17,6 @@ target_include_directories(bucketrt PRIVATE code)
 # Setup Target
 add_executable(bucket
   code/ast.cxx
-  code/code_generator_setup.cxx
   code/codegen.cxx
   code/lexer.cxx
   code/main.cxx

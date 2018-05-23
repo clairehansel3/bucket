@@ -3,7 +3,6 @@
 #include "lexer.hxx"
 #include "parser.hxx"
 #include "source.hxx"
-#include "code_generator_setup.hxx"
 #include <boost/filesystem.hpp>
 #ifdef BUCKET_DEBUG
 #include <csignal>
@@ -128,7 +127,7 @@ static void bucket(int argc, char** argv) {
       throw std::runtime_error("no file specified");
     Parser parser{argv[2]};
     auto program = parser.parse();
-    CodeGeneratorSetup cgs;
+    CodeGenerator cgs;
     cgs.setup(program.get());
     cgs.showSymbols();
   }
