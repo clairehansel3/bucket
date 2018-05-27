@@ -519,6 +519,12 @@ std::unique_ptr<ast::Expression> Parser::parseLiteral() {
     m_lexer.next();
     return boolean;
   }
+  if (auto ptr = m_lexer.token().getStringLiteral()) {
+    auto str = std::make_unique<ast::String>();
+    str->value = std::move(*ptr);
+    m_lexer.next();
+    return str;
+  }
   return nullptr;
 }
 

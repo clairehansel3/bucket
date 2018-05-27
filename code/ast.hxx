@@ -30,6 +30,7 @@ struct Call;
 struct Identifier;
 struct Integer;
 struct Bool;
+struct String;
 
 class Visitor {
 public:
@@ -52,6 +53,7 @@ public:
   virtual void visit(Identifier*)          {assert(false);}
   virtual void visit(Integer*)             {assert(false);}
   virtual void visit(Bool*)                {assert(false);}
+  virtual void visit(String*)              {assert(false);}
 };
 
 struct Node : private boost::noncopyable {
@@ -147,6 +149,11 @@ struct Bool final : Expression {
   void receive(Visitor* visitor) override {visitor->visit(this);}
 };
 
+struct String final : Expression {
+  std::string value;
+  void receive(Visitor* visitor) override {visitor->visit(this);}
+};
+
 namespace details {
 
 template <typename To>
@@ -172,6 +179,7 @@ private:
   void visit(Identifier* ptr)          override {cast(ptr);}
   void visit(Integer* ptr)             override {cast(ptr);}
   void visit(Bool* ptr)                override {cast(ptr);}
+  void visit(String* ptr)              override {cast(ptr);}
   template <typename From>
   void cast([[maybe_unused]] From* ptr) {
     if constexpr (std::is_base_of_v<To, From>)
