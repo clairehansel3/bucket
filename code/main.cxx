@@ -121,16 +121,6 @@ static void bucket(int argc, char** argv) {
     auto program = parser.parse();
     ast::dump(program.get());
   }
-  else if (!std::strcmp(command, "ss")) {
-    // Show Symbols
-    if (argc < 3)
-      throw std::runtime_error("no file specified");
-    Parser parser{argv[2]};
-    auto program = parser.parse();
-    CodeGenerator cgs;
-    cgs.setup(program.get());
-    cgs.showSymbols();
-  }
   else if (!std::strcmp(command, "c")) {
     // Compile
     if (argc < 3)
@@ -138,11 +128,7 @@ static void bucket(int argc, char** argv) {
     Parser parser{argv[2]};
     auto program = parser.parse();
     CodeGenerator cg;
-    cg.generate(program.get());
-    std::error_code ec;
-    llvm::raw_fd_ostream stream{"result.bc", ec, llvm::sys::fs::F_None};
-    llvm::WriteBitcodeToFile(cg.module(), stream);
-    stream.flush();
+    cg.generate(program.get(), "result.bc");
     std::system(
       "llc -O3 result.bc -o result.s && "
       "as result.s -o result.o && "

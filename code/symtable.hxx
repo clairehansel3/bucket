@@ -1,12 +1,6 @@
 #ifndef BUCKET_SYMTABLE_HXX
 #define BUCKET_SYMTABLE_HXX
 
-#ifdef BUCKET_DEBUG
-  #define BUCKET_IF_DEBUG(X) X
-#else
-  #define BUCKET_IF_DEBUG(X)
-#endif
-
 #include <boost/iterator/iterator_adaptor.hpp>
 #include <cassert>
 #include <memory>
@@ -66,7 +60,6 @@ public:
   Class* classof() const noexcept;
   void receive(Visitor* visitor) override {visitor->visit(this);}
 private:
-  BUCKET_IF_DEBUG(bool m_value_is_set;)
   llvm::AllocaInst* m_value;
   Class* const m_classof;
   Variable(std::string&& fullname, Class* classof) noexcept;
@@ -76,14 +69,16 @@ class Method final : public Entry {
 friend class SymbolTable;
 public:
   llvm::Function* function() const noexcept;
-  void setFunction(llvm::Function* function) noexcept;
+  void setFunction(llvm::Function* function, bool accepts_instance) noexcept;
   const std::vector<Class*>& argumentClasses() const noexcept;
   Class* returnClass() const noexcept;
+  bool acceptsInstance() const noexcept;
   void receive(Visitor* visitor) override {visitor->visit(this);}
 private:
   llvm::Function* m_function;
   const std::vector<Class*> m_argument_classes;
   Class* const m_return_class;
+  bool m_accepts_instance;
   Method(std::string&& fullname, std::vector<Class*>&& argument_classes, Class* return_class) noexcept;
 };
 
@@ -102,7 +97,6 @@ public:
   llvm::Type* type() const noexcept;
   void receive(Visitor* visitor) override {visitor->visit(this);}
 protected:
-  BUCKET_IF_DEBUG(bool m_type_is_set;)
   llvm::Type* m_type;
   Class(std::string&& fullname, llvm::Type* type) noexcept;
 };
