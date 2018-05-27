@@ -44,6 +44,10 @@ void Lexer::next() {
       return;
     }
 
+    case '"':
+      lexStringLiteral();
+      return;
+
     case '%':
       lexSymbol(Symbol::PercentSign);
       return;
@@ -329,4 +333,59 @@ void Lexer::lexIdentifierOrKeyword() {
     return;
   }
   m_token = Token::keyword(begin, m_source_file.position(), keyword);
+}
+
+void Lexer::lexStringLiteral() {
+  auto begin = m_source_file.position();
+  assert(m_source_file.character() == '"');
+  m_source_file.next();
+  std::string s;
+  while (m_source_file.character() != '"') {
+    char character;
+    if (m_source_file.character() == '\\') {
+      m_source_file.next();
+      switch (m_source_file.character()) {
+        case 'a':
+          character = '\a';
+          break;
+        case 'b':
+          character = '\b';
+          break;
+        case 'f':
+          character = '\f';
+          break;
+        case 'n':
+          character = '\n';
+          break;
+        case 'r':
+          character = '\r';
+          break;
+        case 't':
+          character = '\t';
+          break;
+        case 'v':
+          character = '\v';
+          break;
+        case '\\':
+          character = '\\';
+          break;
+        case '\'':
+          character = '\'';
+          break;
+        case '"':
+          character = '"';
+          break;
+        default:
+          throw std::runtime_error("invalid escape sequence");
+      }
+    }
+    else if (m_source_file.character() == -1)
+      throw std::runtime_error("string literal not closed");
+    else
+      character = m_source_file.character();
+    s += character;
+    m_source_file.next();
+  }
+  m_source_file.next();
+  m_token = Token::stringLiteral(begin, m_source_file.position(), std::move(s));
 }
