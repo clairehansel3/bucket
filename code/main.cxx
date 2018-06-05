@@ -15,7 +15,7 @@
 #include <llvm/Bitcode/BitcodeWriter.h>
 #include <llvm/Support/FileSystem.h>
 #ifndef BUCKET_DEBUG
-#include <llvm/Support/initLLVM.h>
+#include <llvm/Support/InitLLVM.h>
 #endif
 #include <llvm/Support/raw_ostream.h>
 #include <stdexcept>
@@ -25,7 +25,6 @@ namespace fs = boost::filesystem;
 
 #define BUILD_DIRECTORY         "/Users/claire/bucket/.build"
 #define CXX_COMPILER_PATH       "/Users/claire/Software/prefix/bin/clang++"
-#define INSTALL_PREFIX          "/Users/claire/Software/prefix"
 
 static void bucket(int argc, char** argv) {
   // Initialize LLVM

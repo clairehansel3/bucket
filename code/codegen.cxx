@@ -58,7 +58,7 @@ void CodeGenerator::declareBuiltinMethod(std::string_view name, std::initializer
 };
 
 void CodeGenerator::initializeBuiltins() {
-  auto bool_class = m_symbol_table.createClass("bool", llvm::IntegerType::getInt1Ty(m_llvm_context));
+  m_symbol_table.createClass("bool", llvm::IntegerType::getInt1Ty(m_llvm_context));
   auto int_class  = m_symbol_table.createClass("int", llvm::IntegerType::getInt64Ty(m_llvm_context));
   auto void_class = m_symbol_table.createClass("void", llvm::Type::getVoidTy(m_llvm_context));
   declareBuiltinMethod("foo", {}, void_class);

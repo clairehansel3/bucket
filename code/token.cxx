@@ -1,4 +1,5 @@
 #include "token.hxx"
+#include "misc.hxx"
 #include <cassert>
 #include <utility>
 
@@ -112,23 +113,23 @@ std::ostream& operator<<(std::ostream& stream, Token& token) {
   if (token.isEndOfFile())
     stream << "<eof>";
   else if (auto identifier_ptr = token.getIdentifier())
-    stream << "<id:" << *identifier_ptr << '>';
+    stream << "<identifier: " << *identifier_ptr << '>';
   else if (auto keyword_ptr = token.getKeyword())
     stream << '<' << keywordToString(*keyword_ptr) << '>';
   else if (auto symbol_ptr = token.getSymbol())
     stream << '<' << symbolToString(*symbol_ptr) << '>';
   else if (auto integer_literal_ptr = token.getIntegerLiteral())
-    stream << "<int:" << *integer_literal_ptr << '>';
+    stream << "<integer: " << *integer_literal_ptr << '>';
   else if (auto boolean_literal_ptr = token.getBooleanLiteral())
-    stream << "<bool:" << (*boolean_literal_ptr ? "true" : "false") << '>';
+    stream << "<boolean: " << *boolean_literal_ptr << '>';
   else
     assert(false);
   return stream;
 }
 
 Token::Token() noexcept
-: m_begin{nullptr},
-  m_end{nullptr},
+: m_begin{},
+  m_end{},
   m_value{} {}
 
 Token::Token(SourceFile::Position begin, SourceFile::Position end, VariantType&& value) noexcept

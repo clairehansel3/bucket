@@ -99,10 +99,10 @@ std::unique_ptr<ast::Field> Parser::parseMemberVariable() {
 
 std::unique_ptr<ast::Statement> Parser::parseStatement() {
   if (auto ptr = parseIf())
-    return ptr;
+    return std::move(ptr);
 
   if (auto ptr = parseLoop())
-    return ptr;
+    return std::move(ptr);
 
   if (accept(Keyword::Break)) {
     expect(Symbol::Newline);
@@ -118,14 +118,14 @@ std::unique_ptr<ast::Statement> Parser::parseStatement() {
     auto ret = std::make_unique<ast::Ret>();
     ret->value = parseExpression();
     expect(Symbol::Newline);
-    return ret;
+    return std::move(ret);
   }
 
   if (auto ptr = parseExpression()) {
     expect(Symbol::Newline);
     auto expression_statement = std::make_unique<ast::ExpressionStatement>();
     expression_statement->value = std::move(ptr);
-    return expression_statement;
+    return std::move(expression_statement);
   }
 
   return nullptr;
@@ -184,7 +184,7 @@ std::unique_ptr<ast::Expression> Parser::parseExpression() {
     assignment->left = std::move(ptr);
     if (!(assignment->right = parseExpression()))
       throw std::runtime_error("expected expression on rhs");
-    return assignment;
+    return std::move(assignment);
   }
   return ptr;
 }
@@ -203,7 +203,7 @@ std::unique_ptr<ast::Expression> Parser::parseOrExpression() {
   if (!expression)
     throw std::runtime_error("expected expression after 'or'");
   call->args.push_back(std::move(expression));
-  return call;
+  return std::move(call);
 }
 
 
@@ -220,7 +220,7 @@ std::unique_ptr<ast::Expression> Parser::parseAndExpression() {
   if (!expression)
     throw std::runtime_error("expected expression after 'and'");
   call->args.push_back(std::move(expression));
-  return call;
+  return std::move(call);
 }
 
 
@@ -242,7 +242,7 @@ std::unique_ptr<ast::Expression> Parser::parseEqualityExpression() {
   if (!expression)
     throw std::runtime_error("expected expression after equality");
   call->args.push_back(std::move(expression));
-  return call;
+  return std::move(call);
 }
 
 
@@ -268,7 +268,7 @@ std::unique_ptr<ast::Expression> Parser::parseComparisonExpression() {
   if (!expression)
     throw std::runtime_error("expected expression after equality");
   call->args.push_back(std::move(expression));
-  return call;
+  return std::move(call);
 }
 
 
@@ -337,7 +337,7 @@ std::unique_ptr<ast::Expression> Parser::parseTerm() {
     else if (accept(Symbol::PercentSign))
       name = "__mod__";
     else
-      return call;
+      return std::move(call);
     auto new_call = std::make_unique<ast::Call>();
     new_call->object = std::move(call);
     new_call->name = std::move(name);
@@ -368,7 +368,7 @@ std::unique_ptr<ast::Expression> Parser::parseFactor() {
   if (!(call->object = parseFactor()))
     throw std::runtime_error("I'm too lazy to keep writing error messages");
   call->name = std::move(name);
-  return call;
+  return std::move(call);
 }
 
 
@@ -383,7 +383,7 @@ std::unique_ptr<ast::Expression> Parser::parseExponent() {
     if (!(expression = parseFactor()))
       throw std::runtime_error("foo");
     call->args.push_back(std::move(expression));
-    return call;
+    return std::move(call);
   }
   return expression;
 }
@@ -498,11 +498,11 @@ std::unique_ptr<ast::Expression> Parser::parseIdentifier() {
       } while (accept(Symbol::Comma));
       expect(Symbol::CloseParenthesis);
     }
-    return call;
+    return std::move(call);
   }
   auto identifier = std::make_unique<ast::Identifier>();
   identifier->value = std::move(identifier_string);
-  return identifier;
+  return std::move(identifier);
 }
 
 
@@ -511,13 +511,13 @@ std::unique_ptr<ast::Expression> Parser::parseLiteral() {
     auto integer = std::make_unique<ast::Integer>();
     integer->value = *ptr;
     m_lexer.next();
-    return integer;
+    return std::move(integer);
   }
   if (auto ptr = m_lexer.token().getBooleanLiteral()) {
     auto boolean = std::make_unique<ast::Bool>();
     boolean->value = *ptr;
     m_lexer.next();
-    return boolean;
+    return std::move(boolean);
   }
   return nullptr;
 }
