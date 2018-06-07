@@ -12,6 +12,8 @@
 #include <type_traits>
 #include <utility>
 
+#include <csignal>
+
 namespace misc {
 
 namespace details {
@@ -296,6 +298,7 @@ template <typename... Args>
   concatenateAndCall(
     [](std::string_view string){
       assert(string.find('\0') == string.size() - 1);
+      std::raise(SIGSEGV);
       throw std::runtime_error(string.data());
     },
     std::forward<Args>(args)...,

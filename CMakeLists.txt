@@ -1,6 +1,6 @@
 # Basics
 cmake_minimum_required(VERSION 3.10.2 FATAL_ERROR)
-project(bucket VERSION 0.0.0 LANGUAGES CXX)
+project(bucket VERSION 0.0.0 LANGUAGES C CXX)
 
 # Find Packages
 find_package(LLVM 7.0.0 REQUIRED)
@@ -8,7 +8,7 @@ find_package(Boost 1.66 COMPONENTS filesystem REQUIRED)
 
 # Setup bucketrt
 add_library(bucketrt SHARED
-  code/runtime.cxx
+  code/runtime.c
 )
 
 set_target_properties(bucketrt PROPERTIES CXX_EXTENSIONS OFF CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
@@ -21,7 +21,6 @@ add_executable(bucket
   code/lexer.cxx
   code/main.cxx
   code/parser.cxx
-  code/runtime.cxx
   code/source.cxx
   code/symtable.cxx
   code/token.cxx

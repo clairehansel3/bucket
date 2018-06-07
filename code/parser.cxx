@@ -211,7 +211,7 @@ std::unique_ptr<ast::Expression> Parser::parseAndExpression() {
   auto expression = parseEqualityExpression();
   if (!expression)
     return nullptr;
-  if (!accept(Keyword::Or))
+  if (!accept(Keyword::And))
     return expression;
   auto call = std::make_unique<ast::Call>();
   call->object = std::move(expression);

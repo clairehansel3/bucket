@@ -25,7 +25,7 @@ private:
   llvm::Value* m_current_value;
   std::stack<std::pair<llvm::BasicBlock*, llvm::BasicBlock*>> m_loop_blocks;
   sym::Class* lookupClass(const ast::Expression* expression) const;
-  void declareBuiltinMethod(std::string_view name, std::initializer_list<sym::Class*> args, sym::Class* return_class);
+  void declareBuiltinMethod(sym::Class* cls, std::string_view name, std::initializer_list<sym::Class*> args, sym::Class* return_class, std::string_view link_name);
   void initializeBuiltins();
   void initializeClasses(const ast::Class* cls);
   void initializeFieldsAndMethods(const ast::Class* cls);

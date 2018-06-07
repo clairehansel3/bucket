@@ -69,16 +69,14 @@ class Method final : public Entry {
 friend class SymbolTable;
 public:
   llvm::Function* function() const noexcept;
-  void setFunction(llvm::Function* function, bool accepts_instance) noexcept;
+  void setFunction(llvm::Function* function) noexcept;
   const std::vector<Class*>& argumentClasses() const noexcept;
   Class* returnClass() const noexcept;
-  bool acceptsInstance() const noexcept;
   void receive(Visitor* visitor) override {visitor->visit(this);}
 private:
   llvm::Function* m_function;
   const std::vector<Class*> m_argument_classes;
   Class* const m_return_class;
-  bool m_accepts_instance;
   Method(std::string&& fullname, std::vector<Class*>&& argument_classes, Class* return_class) noexcept;
 };
 

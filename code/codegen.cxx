@@ -7,6 +7,7 @@
 #include <boost/polymorphic_pointer_cast.hpp>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Bitcode/BitcodeWriter.h>
+#include <llvm/IR/Constants.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Type.h>
@@ -48,21 +49,37 @@ sym::Class* CodeGenerator::lookupClass(const ast::Expression* expression) const 
   return nullptr;
 }
 
-void CodeGenerator::declareBuiltinMethod(std::string_view name, std::initializer_list<sym::Class*> args, sym::Class* return_class) {
+void CodeGenerator::declareBuiltinMethod(sym::Class* cls, std::string_view name, std::initializer_list<sym::Class*> args, sym::Class* return_class, std::string_view link_name) {
   std::vector<sym::Class*> sym_args{args};
-  std::vector<llvm::Type*> llvm_args{sym_args.size()};
-  std::transform(sym_args.begin(), sym_args.end(), llvm_args.begin(), [](sym::Class* cls){return cls->type();});
+  std::vector<llvm::Type*> llvm_args{sym_args.size() + 1};
+  llvm_args[0] = m_symbol_table.getReferenceClass(cls)->type();
+  std::transform(sym_args.begin(), sym_args.end(), llvm_args.begin() + 1, [](sym::Class* cls2){return cls2->type();});
   auto method = m_symbol_table.createMethod(name, std::move(sym_args), return_class);
   method->setFunction(llvm::Function::Create(llvm::FunctionType::get(return_class->type(), llvm_args, false),
-    llvm::Function::ExternalLinkage, llvm::StringRef(name.data(), name.size()), &m_llvm_module), false);
-};
+    llvm::Function::ExternalLinkage, llvm::StringRef(link_name.data(), link_name.size()), &m_llvm_module));
+}
 
 void CodeGenerator::initializeBuiltins() {
-  m_symbol_table.createClass("bool", llvm::IntegerType::getInt1Ty(m_llvm_context));
+  [[maybe_unused]] auto void_class = m_symbol_table.createClass("void", llvm::Type::getVoidTy(m_llvm_context));
+  auto bool_class = m_symbol_table.createClass("bool", llvm::IntegerType::getInt1Ty(m_llvm_context));
   auto int_class  = m_symbol_table.createClass("int", llvm::IntegerType::getInt64Ty(m_llvm_context));
-  auto void_class = m_symbol_table.createClass("void", llvm::Type::getVoidTy(m_llvm_context));
-  declareBuiltinMethod("foo", {}, void_class);
-  declareBuiltinMethod("print_integer", {int_class}, void_class);
+  m_symbol_table.pushScope("bool");
+  declareBuiltinMethod(bool_class, "__and__", {bool_class}, bool_class, "bucket_bool_and");
+  declareBuiltinMethod(bool_class, "__or__", {bool_class}, bool_class, "bucket_bool_or");
+  declareBuiltinMethod(bool_class, "__not__", {}, bool_class, "bucket_bool_not");
+  m_symbol_table.popScope();
+  m_symbol_table.pushScope("int");
+  declareBuiltinMethod(int_class, "__add__", {int_class}, int_class, "bucket_int_add");
+  declareBuiltinMethod(int_class, "__sub__", {int_class}, int_class, "bucket_int_sub");
+  declareBuiltinMethod(int_class, "__mul__", {int_class}, int_class, "bucket_int_mul");
+  declareBuiltinMethod(int_class, "__div__", {int_class}, int_class, "bucket_int_div");
+  declareBuiltinMethod(int_class, "__mod__", {int_class}, int_class, "bucket_int_mod");
+  declareBuiltinMethod(int_class, "__lt__", {int_class}, bool_class, "bucket_int_lt");
+  declareBuiltinMethod(int_class, "__le__", {int_class}, bool_class, "bucket_int_le");
+  declareBuiltinMethod(int_class, "__eq__", {int_class}, bool_class, "bucket_int_eq");
+  declareBuiltinMethod(int_class, "__ge__", {int_class}, bool_class, "bucket_int_ge");
+  declareBuiltinMethod(int_class, "__gt__", {int_class}, bool_class, "bucket_int_gt");
+  m_symbol_table.popScope();
 }
 
 void CodeGenerator::initializeClasses(const ast::Class* cls) {
@@ -129,22 +146,12 @@ void CodeGenerator::resolveMethods() {
     if (auto method = sym::sym_cast<sym::Method*>(entry)) {
       // Skip builtin functions which already have an associated llvm function.
       if (!method->function()) {
-        std::vector<llvm::Type*> argument_types;
-        std::vector<llvm::Type*>::iterator argument_types_begin_iterator;
-        auto parent = m_symbol_table.getParentClass(method);
-        auto accepts_instance = bool(parent->fields().size());
-        if (accepts_instance) {
-          argument_types.resize(method->argumentClasses().size() + 1);
-          argument_types[0] = m_symbol_table.getReferenceClass(parent)->type();
-          argument_types_begin_iterator = argument_types.begin() + 1;
-        } else {
-          argument_types.resize(method->argumentClasses().size());
-          argument_types_begin_iterator = argument_types.begin();
-        }
+        std::vector<llvm::Type*> argument_types{method->argumentClasses().size() + 1};
+        argument_types[0] = m_symbol_table.getReferenceClass(m_symbol_table.getParentClass(method))->type();
         std::transform(method->argumentClasses().begin(), method->argumentClasses().end(),
-          argument_types_begin_iterator, [](sym::Class* cls){return cls->type();});
+          argument_types.begin() + 1, [](sym::Class* cls){return cls->type();});
         auto function_type = llvm::FunctionType::get(method->returnClass()->type(), argument_types, false);
-        method->setFunction(llvm::Function::Create(function_type, llvm::Function::ExternalLinkage, llvm::StringRef(method->fullname().data(), method->fullname().size()), &m_llvm_module), accepts_instance);
+        method->setFunction(llvm::Function::Create(function_type, llvm::Function::ExternalLinkage, llvm::StringRef(method->fullname().data(), method->fullname().size()), &m_llvm_module));
       }
     }
   }
@@ -183,11 +190,9 @@ void CodeGenerator::visit(ast::Method* method) {
   auto ast_arg_end = method->args.end();
   auto sym_arg_iter = m_current_method->argumentClasses().begin();
   auto sym_arg_end = m_current_method->argumentClasses().end();
-  if (m_current_method->acceptsInstance()) {
-    auto this_variable = createAllocaVariable("this", m_symbol_table.getReferenceClass(m_symbol_table.getParentClass(m_current_method)));
-    m_llvm_ir_builder.CreateStore(llvm_arg_iter, this_variable->value());
-    ++llvm_arg_iter;
-  }
+  auto this_variable = createAllocaVariable("this", m_symbol_table.getReferenceClass(m_symbol_table.getParentClass(m_current_method)));
+  m_llvm_ir_builder.CreateStore(llvm_arg_iter, this_variable->value());
+  ++llvm_arg_iter;
   while (llvm_arg_iter != llvm_arg_end) {
     assert(ast_arg_iter != ast_arg_end);
     assert(sym_arg_iter != sym_arg_end);
@@ -409,33 +414,34 @@ void CodeGenerator::visit(ast::Call* call) {
   auto method = sym::sym_cast<sym::Method*>(found);
   if (!method)
     throw std::runtime_error("not a method");
-
-  // Next we check if it is a static method or an instance method
-  if (!method->acceptsInstance()) {
-    if (m_current_value)
-      throw std::runtime_error("instance passed to static method");
-    std::vector<llvm::Value*> arguments{method->argumentClasses().size()};
-    if (method->argumentClasses().size() != call->args.size())
-      throw std::runtime_error("argument count mismatch");
-    auto argument_class_iter = method->argumentClasses().begin();
-    auto argument_expression_iter = call->args.begin();
-    auto argument_iter = arguments.begin();
-    while (argument_iter != arguments.end()) {
-      (*argument_expression_iter)->receive(this);
-      if (!m_current_value)
-        throw std::runtime_error("cannot pass a class to a method");
-      if (m_current_value_class != *argument_class_iter)
-        throw std::runtime_error("argument class mismatch");
-      *argument_iter = m_current_value;
-      ++argument_class_iter;
-      ++argument_expression_iter;
-      ++argument_iter;
-    }
-    m_current_value = m_llvm_ir_builder.CreateCall(method->function(), arguments);
-    m_current_value_class = method->returnClass();
-    return;
+  std::vector<llvm::Value*> arguments{method->argumentClasses().size() + 1};
+  if (m_current_value) {
+    llvm::IRBuilder<> temporary_ir_builder{&m_current_method->function()->getEntryBlock(), m_current_method->function()->getEntryBlock().begin()};
+    auto alloca_inst = temporary_ir_builder.CreateAlloca(m_current_value_class->type(), 0, nullptr, "temp");
+    m_llvm_ir_builder.CreateStore(m_current_value, alloca_inst);
+    arguments[0] = alloca_inst;
   }
-  assert(false);
+  else
+    arguments[0] = llvm::ConstantPointerNull::get(static_cast<llvm::PointerType*>(m_symbol_table.getReferenceClass(m_symbol_table.getParentClass(method))->type()));
+  if (method->argumentClasses().size() != call->args.size())
+    throw std::runtime_error("argument count mismatch");
+  auto argument_class_iter = method->argumentClasses().begin();
+  auto argument_expression_iter = call->args.begin();
+  auto argument_iter = arguments.begin() + 1;
+  while (argument_iter != arguments.end()) {
+    (*argument_expression_iter)->receive(this);
+    if (!m_current_value)
+      throw std::runtime_error("cannot pass a class to a method");
+    if (m_current_value_class != *argument_class_iter)
+      throw std::runtime_error("argument class mismatch");
+    *argument_iter = m_current_value;
+    ++argument_class_iter;
+    ++argument_expression_iter;
+    ++argument_iter;
+  }
+  m_current_value = m_llvm_ir_builder.CreateCall(method->function(), arguments);
+  m_current_value_class = method->returnClass();
+  return;
 }
 
 void CodeGenerator::visit(ast::Identifier* identifier) {
@@ -483,9 +489,7 @@ void CodeGenerator::finalize() {
   m_llvm_ir_builder.SetInsertPoint(llvm::BasicBlock::Create(m_llvm_context, "$entry", actual_main));
   auto alloca_inst = m_llvm_ir_builder.CreateAlloca(module_cls->type(), 0, nullptr, "main");
   std::vector<llvm::Value*> args;
-  if (module_main->acceptsInstance()) {
-    args.push_back(alloca_inst);
-  }
+  args.push_back(alloca_inst);
   auto call_inst = m_llvm_ir_builder.CreateCall(module_main->function(), args);
   llvm::BasicBlock* then_bb = llvm::BasicBlock::Create(m_llvm_context, "$then", actual_main);
   llvm::BasicBlock* else_bb = llvm::BasicBlock::Create(m_llvm_context, "$else", actual_main);

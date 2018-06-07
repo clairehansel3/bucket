@@ -33,9 +33,8 @@ llvm::Function* Method::function() const noexcept {
   return m_function;
 }
 
-void Method::setFunction(llvm::Function* function, bool accepts_instance) noexcept {
+void Method::setFunction(llvm::Function* function) noexcept {
   m_function = function;
-  m_accepts_instance = accepts_instance;
 }
 
 const std::vector<Class*>& Method::argumentClasses() const noexcept {
@@ -44,10 +43,6 @@ const std::vector<Class*>& Method::argumentClasses() const noexcept {
 
 Class* Method::returnClass() const noexcept {
   return m_return_class;
-}
-
-bool Method::acceptsInstance() const noexcept {
-  return m_accepts_instance;
 }
 
 Method::Method(std::string&& fullname, std::vector<Class*>&& argument_classes, Class* return_class) noexcept
