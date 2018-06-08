@@ -77,6 +77,10 @@ Token Token::booleanLiteral(SourceFile::Position begin, SourceFile::Position end
   return Token(begin, end, VariantType(std::in_place_index_t<5>(), boolean_literal));
 }
 
+Token Token::stringLiteral(SourceFile::Position begin, SourceFile::Position end, std::string&& string_literal) {
+  return Token(begin, end, VariantType(std::in_place_index_t<6>(), std::move(string_literal)));
+}
+
 SourceFile::Position Token::begin() const noexcept {
   return m_begin;
 }
@@ -109,6 +113,10 @@ bool* Token::getBooleanLiteral() noexcept {
   return std::get_if<5>(&m_value);
 }
 
+std::string* Token::getStringLiteral() noexcept {
+  return std::get_if<6>(&m_value);
+}
+
 std::ostream& operator<<(std::ostream& stream, Token& token) {
   if (token.isEndOfFile())
     stream << "<eof>";
@@ -121,7 +129,9 @@ std::ostream& operator<<(std::ostream& stream, Token& token) {
   else if (auto integer_literal_ptr = token.getIntegerLiteral())
     stream << "<integer: " << *integer_literal_ptr << '>';
   else if (auto boolean_literal_ptr = token.getBooleanLiteral())
-    stream << "<boolean: " << *boolean_literal_ptr << '>';
+    stream << "<bool:" << (*boolean_literal_ptr ? "true" : "false") << '>';
+  else if (auto string_literal_ptr = token.getStringLiteral())
+    stream << "<str:\"" << *string_literal_ptr << "\">";
   else
     assert(false);
   return stream;

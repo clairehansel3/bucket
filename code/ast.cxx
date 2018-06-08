@@ -21,6 +21,7 @@ private:
   void visit(Identifier* ptr)          override;
   void visit(Integer* ptr)             override;
   void visit(Bool* ptr)                override;
+  void visit(String* ptr)              override;
 };
 
 }
@@ -148,6 +149,10 @@ void Printer::visit(Integer* ptr) {
 
 void Printer::visit(Bool* ptr) {
   std::cerr << (ptr->value ? "true" : "false");
+}
+
+void Printer::visit(String* ptr) {
+  std::cerr << '"' << ptr->value << '"';
 }
 
 }

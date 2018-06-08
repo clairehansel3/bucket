@@ -30,6 +30,7 @@ public:
   static Token symbol(SourceFile::Position begin, SourceFile::Position end, Symbol symbol);
   static Token integerLiteral(SourceFile::Position begin, SourceFile::Position end, std::int64_t integer_literal);
   static Token booleanLiteral(SourceFile::Position begin, SourceFile::Position end, bool boolean_literal);
+  static Token stringLiteral(SourceFile::Position begin, SourceFile::Position end, std::string&& string_literal);
   SourceFile::Position begin() const noexcept;
   SourceFile::Position end() const noexcept;
   bool isEndOfFile() const noexcept;
@@ -38,6 +39,7 @@ public:
   Symbol* getSymbol() noexcept;
   std::int64_t* getIntegerLiteral() noexcept;
   bool* getBooleanLiteral() noexcept;
+  std::string* getStringLiteral() noexcept;
   friend std::ostream& operator<<(std::ostream& stream, Token& token);
 private:
   using VariantType = std::variant<
@@ -46,7 +48,8 @@ private:
     Keyword,        // Keyword
     Symbol,         // Symbol
     std::int64_t,   // Integer Literal
-    bool            // Boolean Literal
+    bool,           // Boolean Literal
+    std::string     // String Literal
   >;
   SourceFile::Position m_begin, m_end;
   VariantType m_value;

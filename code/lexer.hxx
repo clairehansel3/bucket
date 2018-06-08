@@ -17,6 +17,7 @@ private:
   void lexNumber();
   void lexSlash();
   void lexIdentifierOrKeyword();
+  void lexStringLiteral();
 };
 
 #endif
