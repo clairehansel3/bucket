@@ -1,7 +1,7 @@
 #include "ast.hxx"
 #include "codegen.hxx"
-#include "lexer.hxx"
-#include "parser.hxx"
+//#include "lexer.hxx"
+//#include "parser.hxx"
 #include "source.hxx"
 #include <boost/filesystem.hpp>
 #ifdef BUCKET_DEBUG
@@ -96,12 +96,27 @@ static void bucket(int argc, char** argv) {
     // Read
     if (argc < 3)
       throw std::runtime_error("no file specified");
-    SourceFile source_file{argv[2]};
-    while (source_file.character() != -1) {
-      std::cout << static_cast<char>(source_file.character());
-      source_file.next();
+    Source source{argv[2]};
+    std::forward_list<std::pair<Source::iterator, Source::iterator>> ranges;
+    for (char letter : {'a', 'b', 'c', 'd'}) {
+      for (auto it = source.begin(); it != source.end(); ++it) {
+        if (*it == letter) {
+          auto beg = it;
+          ++it;
+          for (auto it2 = it; it2 != source.end(); ++it2) {
+            if (*it2 == letter) {
+              ranges.emplace_front(beg, it2);
+              goto done;
+            }
+          }
+        }
+      }
+      done:
+        continue;
     }
+    source.highlight(std::cout, ranges);
   }
+  /*
   else if (!std::strcmp(command, "l")) {
     // Lex
     if (argc < 3)
@@ -135,6 +150,7 @@ static void bucket(int argc, char** argv) {
       "rm result.bc result.s result.o"
     );
   }
+  */
   else
     throw std::runtime_error("unknown command");
 }

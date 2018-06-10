@@ -16,14 +16,14 @@ target_include_directories(bucketrt PRIVATE code)
 
 # Setup Target
 add_executable(bucket
-  code/ast.cxx
-  code/codegen.cxx
-  code/lexer.cxx
+  #code/ast.cxx
+  #code/codegen.cxx
+  #code/lexer.cxx
   code/main.cxx
-  code/parser.cxx
+  #code/parser.cxx
   code/source.cxx
-  code/symtable.cxx
-  code/token.cxx
+  #code/symtable.cxx
+  #code/token.cxx
 )
 
 # Target Details

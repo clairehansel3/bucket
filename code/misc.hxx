@@ -227,6 +227,11 @@ struct TypeConverter<const char*&> {
 };
 
 template <>
+struct TypeConverter<const char* const&> {
+  using type = std::string_view;
+};
+
+template <>
 struct TypeConverter<std::string> {
   using type = std::string_view;
 };
@@ -291,6 +296,18 @@ decltype(auto) concatenateAndCall(FunctionType&& function, Args&&... args) noexc
   [[maybe_unused]] char* ptr = details::writeAsString(buf, std::forward<Args>(args)...);
   assert(ptr - buf == static_cast<std::ptrdiff_t>(size_as_string));
   return std::invoke(std::forward<FunctionType>(function), std::string_view(buf, size_as_string));
+}
+
+template <typename... Args>
+std::runtime_error make_runtime_error(Args&&... args) {
+  return concatenateAndCall(
+    [](std::string_view string){
+      assert(string.find('\0') == string.size() - 1);
+      return std::runtime_error(string.data());
+    },
+    std::forward<Args>(args)...,
+    '\0'
+  );
 }
 
 template <typename... Args>

@@ -1,24 +1,32 @@
 #ifndef BUCKET_SOURCE_HXX
 #define BUCKET_SOURCE_HXX
 
+#include <boost/noncopyable.hpp>
+#include <forward_list>
 #include <memory>
+#include <ostream>
+#include <utf8.h>
+#include <utility>
 
-class SourceFile {
+class Source : private boost::noncopyable {
 public:
-  struct Position {
-    unsigned line, column;
-    constexpr Position() : line{0}, column{0} {}
-    constexpr Position(unsigned line, unsigned column) : line{line}, column{column} {}
-  };
-  explicit SourceFile(const char* path);
-  int character() const noexcept;
-  Position position() const noexcept;
-  void next() noexcept;
+  #ifdef BUCKET_DEBUG
+  using iterator = utf8::iterator<char*>;
+  #else
+  using iterator = utf8::unchecked::iterator<char*>;
+  #endif
+  explicit Source(const char* path);
+  iterator begin();
+  iterator end();
+  void highlight(std::ostream& stream, iterator position);
+  void highlight(std::ostream& stream, iterator range_begin, iterator range_end);
+  void highlight(std::ostream& stream, std::forward_list<std::pair<iterator, iterator>> const& ranges);
 private:
-  Position m_position;
-  std::unique_ptr<char[]> m_begin;
-  const char* m_iter;
-  const char* m_end;
+  const char* const m_path;
+  std::unique_ptr<char[]> m_buffer;
+  char* m_begin;
+  char* m_end;
+  std::pair<unsigned, unsigned> getLineAndColumn(iterator position);
 };
 
 #endif
