@@ -6,6 +6,7 @@
 #include <fstream>
 #include <optional>
 #include <limits>
+#include <sstream>
 #include <type_traits>
 
 SourceFile::SourceFile(const char* path)
@@ -323,6 +324,27 @@ void SourceFile::highlight(
       start_of_line = iter;
     }
   } while (start_of_line != end());
+}
+
+std::string SourceFile::highlight(iterator position)
+{
+  std::stringstream ss;
+  highlight(ss, position);
+  return ss.str();
+}
+
+std::string SourceFile::highlight(iterator_range range)
+{
+  std::stringstream ss;
+  highlight(ss, range);
+  return ss.str();
+}
+
+std::string SourceFile::highlight(iterator_range_list const& ranges)
+{
+  std::stringstream ss;
+  highlight(ss, ranges);
+  return ss.str();
 }
 
 std::pair<unsigned, unsigned> SourceFile::getLineAndColumn(iterator position)

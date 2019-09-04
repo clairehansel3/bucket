@@ -5,7 +5,7 @@
 #include <forward_list>
 #include <memory>
 #include <ostream>
-#include <utf8.h>
+#include <utf8cpp/utf8.h>
 #include <utility>
 
 #define BUCKET_BOLD  "\033[1;30m"
@@ -48,6 +48,10 @@ public:
   // Creates a formatted excerpt of the code contaning in which a single
   // character, a range of characters, or a list of ranges of characters are
   // highlighted and underlined and then writes it to 'stream'.
+
+  std::string highlight(iterator position);
+  std::string highlight(iterator_range range);
+  std::string highlight(iterator_range_list const& ranges);
 
 private:
 

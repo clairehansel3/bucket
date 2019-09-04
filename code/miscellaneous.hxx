@@ -12,6 +12,13 @@
 #include <type_traits>
 #include <utility>
 
+#if __GCC__ || __clang__
+  #define BUCKET_UNREACHABLE() __builtin_unreachable()
+#else
+  #define BUCKET_UNREACHABLE() assert(false)
+#endif
+
+
 namespace details {
 
 // There is no template in type_traits to determine if a type is an integer, so
