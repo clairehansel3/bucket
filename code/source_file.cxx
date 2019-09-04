@@ -1,3 +1,15 @@
+// Copyright (C) 2019  Claire Hansel
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
 #include "source_file.hxx"
 #include "miscellaneous.hxx"
 #include <boost/numeric/conversion/cast.hpp>
@@ -12,6 +24,7 @@
 SourceFile::SourceFile(const char* path)
 : m_path{path}
 {
+  // read file at 'path' into buffer
   assert(path);
   try {
     std::ifstream file;
@@ -27,12 +40,13 @@ SourceFile::SourceFile(const char* path)
     m_end    = m_begin + file_size;
     file.read(m_begin, file_size);
   } catch (const std::ifstream::failure&) {
-    throw make_runtime_error("unable to open file '", m_path, "'");
+    throw make_error<GeneralError>("unable to open file '", m_path, "'\n");
   }
   if (utf8::starts_with_bom(m_begin, m_end))
     m_begin += 3;
   if (!utf8::is_valid(m_begin, m_end))
-    throw make_runtime_error("file '", m_path, "' contains invalid utf8");
+    throw make_error<GeneralError>("file '", m_path, "' contains invalid utf8"
+      "\n");
 }
 
 SourceFile::iterator SourceFile::begin()
@@ -95,13 +109,22 @@ void SourceFile::highlight(std::ostream& stream, iterator position)
   stream << BUCKET_RED "^\n" BUCKET_BLACK;
 }
 
-void SourceFile::highlight(std::ostream& stream, iterator_range range)
+void SourceFile::highlight(
+  std::ostream& stream,
+  iterator range_begin,
+  iterator range_end)
 {
+  assert(range_begin != range_end);
+  #ifdef BUCKET_DEBUG
+    auto range_begin_plus_one = range_begin;
+    ++range_begin_plus_one;
+    assert(range_begin_plus_one != range_end);
+  #endif
   // print header
-  auto [line, column] = getLineAndColumn(range.first);
+  auto [line, column] = getLineAndColumn(range_begin);
   stream << "file '" BUCKET_BOLD << m_path << BUCKET_BLACK "': starting from li"
          "ne " << line << ", column " << column << ":\n|";
-  auto start_of_line = range.first;
+  auto start_of_line = range_begin;
   while (start_of_line != begin()) {
    --start_of_line;
    if (*start_of_line == '\n') {
@@ -113,7 +136,7 @@ void SourceFile::highlight(std::ostream& stream, iterator_range range)
   unsigned number_of_underline_spaces = 0;
   unsigned number_of_underline_highlights = 0;
   // write the part of first line before the range begins
-  while (iter != range.first) {
+  while (iter != range_begin) {
     utf8::append(*iter, std::ostream_iterator<char>(stream));
     ++number_of_underline_spaces;
     ++iter;
@@ -121,7 +144,7 @@ void SourceFile::highlight(std::ostream& stream, iterator_range range)
   stream << BUCKET_RED;
   // write rest of the first line
   while (true) {
-    if (iter == range.second) {
+    if (iter == range_end) {
       // write part after range
       stream << BUCKET_BLACK;
       while (iter != end() && *iter != '\n') {
@@ -151,14 +174,14 @@ void SourceFile::highlight(std::ostream& stream, iterator_range range)
     stream << '^';
   stream << BUCKET_BLACK "\n";
   ++iter;
-  while (iter != range.second) {
+  while (iter != range_end) {
     stream << "|" BUCKET_RED;
     number_of_underline_highlights = 0;
     while (*iter != '\n') {
       utf8::append(*iter, std::ostream_iterator<char>(stream));
       ++number_of_underline_highlights;
       ++iter;
-      if (iter == range.second) {
+      if (iter == range_end) {
         stream << BUCKET_BLACK;
         while (iter != end() && *iter != '\n') {
           utf8::append(*iter, std::ostream_iterator<char>(stream));
@@ -333,10 +356,10 @@ std::string SourceFile::highlight(iterator position)
   return ss.str();
 }
 
-std::string SourceFile::highlight(iterator_range range)
+std::string SourceFile::highlight(iterator range_begin, iterator range_end)
 {
   std::stringstream ss;
-  highlight(ss, range);
+  highlight(ss, range_begin, range_end);
   return ss.str();
 }
 

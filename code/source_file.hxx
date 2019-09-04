@@ -1,3 +1,15 @@
+// Copyright (C) 2019  Claire Hansel
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
 #ifndef BUCKET_SOURCE_FILE_HXX
 #define BUCKET_SOURCE_FILE_HXX
 
@@ -7,11 +19,6 @@
 #include <ostream>
 #include <utf8cpp/utf8.h>
 #include <utility>
-
-#define BUCKET_BOLD  "\033[1;30m"
-#define BUCKET_BLACK "\033[0;30m"
-#define BUCKET_RED   "\033[0;31m"
-// Colors for highlighting
 
 class SourceFile : private boost::noncopyable {
 // Represents a file containing Bucket source code. SourceFile objects store the
@@ -43,15 +50,17 @@ public:
   // file contents.
 
   void highlight(std::ostream& stream, iterator position);
-  void highlight(std::ostream& stream, iterator_range range);
+  void highlight(std::ostream& stream, iterator begin, iterator end);
   void highlight(std::ostream& stream, iterator_range_list const& ranges);
   // Creates a formatted excerpt of the code contaning in which a single
   // character, a range of characters, or a list of ranges of characters are
   // highlighted and underlined and then writes it to 'stream'.
 
   std::string highlight(iterator position);
-  std::string highlight(iterator_range range);
+  std::string highlight(iterator begin, iterator end);
   std::string highlight(iterator_range_list const& ranges);
+  // The same as the first three highlight functions except the result is
+  // returned as a string rather than written to a stream.
 
 private:
 

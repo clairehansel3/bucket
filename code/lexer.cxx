@@ -5,9 +5,10 @@
 #include <boost/numeric/conversion/cast.hpp>
 #include <cassert>
 #include <cstdint>
+#include <iomanip>
 #include <iterator>
-#include <map>
 #include <string>
+#include <sstream>
 #include <utility>
 
 static bool isDigit(std::uint32_t character)
@@ -91,248 +92,237 @@ static bool isLetter(std::uint32_t character)
   }
 }
 
-static void lex(SourceFile& source_file, Token& token, SourceFile::iterator iter, SourceFile::iterator end)
+static Token lex(SourceFile& source_file, SourceFile::iterator iter)
+// This is the function where the lexing actually takes place. It starts lexing
+// at 'iter' in the source code and returns a token.
 {
-  if (iter == end) {
-    token = Token::createEndOfFile(SourceFile::iterator_range(end, end));
-    return;
-  }
+  SourceFile::iterator begin = iter;
+  SourceFile::iterator end = source_file.end();
+
+  if (iter == end)
+    return Token::createEndOfFile(end, end);
+
+  // basically this function is one giant switch statement
   switch (*iter) {
 
+    // Whitespace (excluding newline)
     case '\t':
     case '\v':
     case '\f':
     case '\r':
     case ' ':
     {
+      // keep iterating through the whitespace until a non whitespace character
+      // (or the end of the file) is found.
       do
         ++iter;
       while (iter != end && (*iter == '\t' || *iter == '\v' || *iter == '\f'
              || *iter == '\r' || *iter == ' '));
-      lex(source_file, token, iter, end);
-      return;
+      // Recursively restart the whole lexing process at the point after the
+      // whitespace.
+      return lex(source_file, iter);
     }
 
+    // 'Simple' Symbol
     case '\n':
     {
-      auto begin = iter;
       ++iter;
-      token = Token::createSymbol(Symbol::Newline, SourceFile::iterator_range(begin, iter));
-      return;
+      return Token::createSymbol(Symbol::Newline, begin, iter);
     }
     case '(':
     {
-      auto begin = iter;
       ++iter;
-      token = Token::createSymbol(Symbol::OpenParenthesis, SourceFile::iterator_range(begin, iter));
-      return;
+      return Token::createSymbol(Symbol::OpenParenthesis, begin, iter);
     }
     case ')':
     {
-      auto begin = iter;
       ++iter;
-      token = Token::createSymbol(Symbol::CloseParenthesis, SourceFile::iterator_range(begin, iter));
-      return;
+      return Token::createSymbol(Symbol::CloseParenthesis, begin, iter);
     }
     case '[':
     {
-      auto begin = iter;
       ++iter;
-      token = Token::createSymbol(Symbol::OpenSquareBracket, SourceFile::iterator_range(begin, iter));
-      return;
+      return Token::createSymbol(Symbol::OpenSquareBracket, begin, iter);
     }
     case ']':
     {
-      auto begin = iter;
       ++iter;
-      token = Token::createSymbol(Symbol::CloseSquareBracket, SourceFile::iterator_range(begin, iter));
-      return;
+      return Token::createSymbol(Symbol::CloseSquareBracket, begin, iter);
     }
     case '+':
     {
-      auto begin = iter;
       ++iter;
-      token = Token::createSymbol(Symbol::Plus, SourceFile::iterator_range(begin, iter));
-      return;
+      return Token::createSymbol(Symbol::Plus, begin, iter);
     }
     case '-':
     {
-      auto begin = iter;
       ++iter;
-      token = Token::createSymbol(Symbol::Minus, SourceFile::iterator_range(begin, iter));
-      return;
+      return Token::createSymbol(Symbol::Minus, begin, iter);
     }
     case '*':
     {
-      auto begin = iter;
       ++iter;
-      token = Token::createSymbol(Symbol::Asterisk, SourceFile::iterator_range(begin, iter));
-      return;
+      return Token::createSymbol(Symbol::Asterisk, begin, iter);
     }
     case '^':
     {
-      auto begin = iter;
       ++iter;
-      token = Token::createSymbol(Symbol::Caret, SourceFile::iterator_range(begin, iter));
-      return;
+      return Token::createSymbol(Symbol::Caret, begin, iter);
     }
     case '%':
     {
-      auto begin = iter;
       ++iter;
-      token = Token::createSymbol(Symbol::PercentSign, SourceFile::iterator_range(begin, iter));
-      return;
+      return Token::createSymbol(Symbol::PercentSign, begin, iter);
     }
     case ',':
     {
-      auto begin = iter;
       ++iter;
-      token = Token::createSymbol(Symbol::Comma, SourceFile::iterator_range(begin, iter));
-      return;
+      return Token::createSymbol(Symbol::Comma, begin, iter);
     }
     case ':':
     {
-      auto begin = iter;
       ++iter;
-      token = Token::createSymbol(Symbol::Colon, SourceFile::iterator_range(begin, iter));
-      return;
+      return Token::createSymbol(Symbol::Colon, begin, iter);
     }
     case '@':
     {
-      auto begin = iter;
       ++iter;
-      token = Token::createSymbol(Symbol::AtSymbol, SourceFile::iterator_range(begin, iter));
-      return;
+      return Token::createSymbol(Symbol::AtSymbol, begin, iter);
     }
     case '&':
     {
-      auto begin = iter;
       ++iter;
-      token = Token::createSymbol(Symbol::Ampersand, SourceFile::iterator_range(begin, iter));
-      return;
+      return Token::createSymbol(Symbol::Ampersand, begin, iter);
     }
 
+    // 'Complex' symbol
     case '=':
     {
-      auto begin = iter;
+      Symbol symbol;
       ++iter;
       if (iter != end && *iter == '=') {
-        token = Token::createSymbol(Symbol::DoubleEquals, SourceFile::iterator_range(begin, ++iter));
+        symbol = Symbol::DoubleEquals;
+        ++iter;
       }
       else {
-        token = Token::createSymbol(Symbol::Equals, SourceFile::iterator_range(begin, iter));
+        symbol = Symbol::Equals;
       }
-      return;
+      return Token::createSymbol(Symbol::Equals, begin, iter);
     }
-
     case '!':
     {
-      auto begin = iter;
+      Symbol symbol;
       ++iter;
       if (iter != end && *iter == '=') {
-        token = Token::createSymbol(Symbol::ExclamationPointEquals, SourceFile::iterator_range(begin, ++iter));
+        symbol = Symbol::ExclamationPointEquals;
+        ++iter;
       }
       else {
-        token = Token::createSymbol(Symbol::ExclamationPoint, SourceFile::iterator_range(begin, iter));
+        symbol = Symbol::ExclamationPoint;
       }
-      return;
+      return Token::createSymbol(Symbol::Equals, begin, iter);
     }
-
     case '>':
     {
-      auto begin = iter;
+      Symbol symbol;
       ++iter;
       if (iter != end && *iter == '=') {
-        token = Token::createSymbol(Symbol::GreaterOrEqual, SourceFile::iterator_range(begin, ++iter));
+        symbol = Symbol::GreaterOrEqual;
+        ++iter;
       }
       else {
-        token = Token::createSymbol(Symbol::Greater, SourceFile::iterator_range(begin, iter));
+        symbol = Symbol::Greater;
       }
-      return;
+      return Token::createSymbol(Symbol::Equals, begin, iter);
     }
-
     case '<':
     {
-      auto begin = iter;
+      Symbol symbol;
       ++iter;
       if (iter != end && *iter == '=') {
-        token = Token::createSymbol(Symbol::LesserOrEqual, SourceFile::iterator_range(begin, ++iter));
+        symbol = Symbol::LesserOrEqual;
+        ++iter;
       }
       else {
-        token = Token::createSymbol(Symbol::Lesser, SourceFile::iterator_range(begin, iter));
+        symbol = Symbol::Lesser;
       }
-      return;
+      return Token::createSymbol(Symbol::Equals, begin, iter);
     }
 
+    // Comment or Slash Symbol
     case '/':
     {
-      auto begin = iter;
       ++iter;
       if (iter != end) {
         if (*iter == '/') {
-          do {
+          // Single line comment
+          do
             ++iter;
-          } while (iter != end && *iter != '\n');
-          lex(source_file, token, iter, end);
-          return;
+          while (iter != end && *iter != '\n');
+          return lex(source_file, iter);
         }
         else if (*iter == '*') {
+          // multiline comment
           unsigned long long depth = 1;
           while (true) {
             ++iter;
             if (iter == end) {
-              throw make_runtime_error("end of file while inside multiline comment of depth ", depth);
+              auto begin_plus_one = begin;
+              ++++begin_plus_one;
+              throw make_error<LexerError>("file ends inside multiline comment "
+                "(depth ", depth, ") which starts here:\n",
+                source_file.highlight(begin, begin_plus_one));
             }
             else if (*iter == '*') {
               ++iter;
               if (iter == end) {
-                throw make_runtime_error("end of file while inside multiline comment of depth ", depth);
+                auto begin_plus_one = begin;
+                ++++begin_plus_one;
+                throw make_error<LexerError>("file ends inside multiline commen"
+                  "t (depth ", depth, ") which starts here:\n",
+                  source_file.highlight(begin, begin_plus_one));
               }
               else if (*iter == '/') {
                 --depth;
                 if (depth == 0) {
                   ++iter;
-                  lex(source_file, token, iter, end);
-                  return;
+                  return lex(source_file, iter);
                 }
               }
             }
             else if (*iter == '/') {
               ++iter;
               if (iter == end) {
-                throw make_runtime_error("end of file while inside multiline comment of depth ", depth);
+                auto begin_plus_one = begin;
+                ++++begin_plus_one;
+                throw make_error<LexerError>("file ends inside multiline commen"
+                  "t (depth ", depth, ") which starts here:\n",
+                  source_file.highlight(begin, begin_plus_one));
               }
               else if (*iter == '*') {
-                ++depth;
                 // theoretically this could overflow here if you had more than
                 // std::numeric_limits<decltype(depth)>::max() nested comments
+                ++depth;
               }
             }
           }
         }
-        else {
-          token = Token::createSymbol(Symbol::Slash, SourceFile::iterator_range(begin, iter));
-          return;
-        }
       }
-      else {
-        token = Token::createSymbol(Symbol::Slash, SourceFile::iterator_range(begin, iter));
-        return;
-      }
+      return Token::createSymbol(Symbol::Slash, begin, iter);
     }
 
+    // String Literal
     case '\"':
     {
-      auto begin = iter;
-      ++iter;
       std::string string;
+      ++iter;
       while (iter != end && *iter != '"') {
         if (*iter == '\\') {
           auto start_of_escape_sequence = iter;
           ++iter;
-          if (iter == end) {
-            throw make_runtime_error("end of file while inside string");
-          }
+          if (iter == end)
+            throw make_error<LexerError>("file ends while inside string which s"
+              "tarts here:\n", source_file.highlight(begin));
           switch (*iter) {
             case 'a':
               string += '\a';
@@ -365,7 +355,14 @@ static void lex(SourceFile& source_file, Token& token, SourceFile::iterator iter
               string += '"';
               break;
             default:
-              throw make_runtime_error("invalid escape sequence", '\n', source_file.highlight(SourceFile::iterator_range(start_of_escape_sequence, iter)));
+              {
+                std::string character;
+                utf8::append(*iter, std::back_inserter(character));
+                ++iter;
+                throw make_error<LexerError>("invalid escape sequence '\\",
+                  character, "':\n", source_file.highlight(
+                    start_of_escape_sequence, iter));
+              }
           }
         }
         else {
@@ -373,31 +370,30 @@ static void lex(SourceFile& source_file, Token& token, SourceFile::iterator iter
         }
         ++iter;
       }
-      if (iter == end) {
-        throw make_runtime_error("end of file while inside string");
-      }
+      if (iter == end)
+        throw make_error<LexerError>("file ends while inside string which start"
+          "s here:\n", source_file.highlight(begin));
       ++iter;
-      std::string utf8string;
-      token = Token::createStringLiteral(std::move(utf8string), SourceFile::iterator_range(begin, ++iter));
-      return;
+      return Token::createStringLiteral(std::move(string), begin, iter);
     }
 
     case '\'':
     {
-      auto begin = iter;
       std::uint32_t character;
       ++iter;
-      if (iter == end) {
-        throw make_runtime_error("end of file in character literal");
-      }
+      if (iter == end)
+        throw make_error<LexerError>("file ends while inside character literal "
+          "which starts here:\n", source_file.highlight(begin));
       else if (*iter == '\'') {
-        throw make_runtime_error("empty character literal", '\n', source_file.highlight(SourceFile::iterator_range(begin, ++iter)));
+        ++iter;
+        throw make_error<LexerError>("empty character literal:\n",
+          source_file.highlight(begin, iter));
       }
       else if (*iter == '\\') {
         ++iter;
-        if (iter == end) {
-          throw make_runtime_error("end of file in character literal");
-        }
+        if (iter == end)
+          throw make_error<LexerError>("file ends while inside character litera"
+            "l which starts here:\n", source_file.highlight(begin));
         switch (*iter) {
           case 'a':
             character = '\a';
@@ -430,22 +426,30 @@ static void lex(SourceFile& source_file, Token& token, SourceFile::iterator iter
             character = '"';
             break;
           default:
-            throw make_runtime_error("invalid escape sequence", '\n', source_file.highlight(SourceFile::iterator_range(begin, ++iter)));
+          {
+            std::string character;
+            auto start_of_escape_sequence = begin;
+            ++start_of_escape_sequence;
+            utf8::append(*iter, std::back_inserter(character));
+            ++iter;
+            throw make_error<LexerError>("invalid escape sequence '\\",
+              character, "':\n", source_file.highlight(
+                start_of_escape_sequence, iter));
+          }
         }
       }
       else {
         character = *iter;
       }
       ++iter;
-      if (iter == end) {
-        throw make_runtime_error("end of file in character literal");
-      }
-      else if (*iter != '\'') {
-        throw make_runtime_error("extra character in character literal", '\n', source_file.highlight(iter));
-      }
+      if (iter == end)
+        throw make_error<LexerError>("file ends while inside character literal "
+          "which starts here:\n", source_file.highlight(begin));
+      else if (*iter != '\'')
+        throw make_error<LexerError>("extra character appears in character lite"
+          "ral:\n", source_file.highlight(iter));
       ++iter;
-      token = Token::createCharacterLiteral(character, SourceFile::iterator_range(begin, iter));
-      return;
+      return Token::createCharacterLiteral(character, begin, iter);
     }
 
     case 'a':
@@ -502,42 +506,20 @@ static void lex(SourceFile& source_file, Token& token, SourceFile::iterator iter
     case 'Z':
     case '_':
     {
-      auto begin = iter;
       std::string string;
       do {
         utf8::append(*iter, std::back_inserter(string));
         ++iter;
-      } while (iter != end && (isDigit(*iter) || isLetter(*iter) || *iter == '_'));
-      static std::map<std::string, Keyword> keyword_dictionary{
-        {"end", Keyword::End},
-        {"if", Keyword::If},
-        {"elif", Keyword::Elif},
-        {"else", Keyword::Else},
-        {"do", Keyword::Do},
-        {"for", Keyword::For},
-        {"break", Keyword::Break},
-        {"cycle", Keyword::Cycle},
-        {"ret", Keyword::Ret},
-        {"and", Keyword::And},
-        {"or", Keyword::Or},
-        {"not", Keyword::Not},
-        {"class", Keyword::Class},
-        {"method", Keyword::Method}
-      };
-      auto it = keyword_dictionary.find(string);
-      if (it != keyword_dictionary.end()) {
-        token = Token::createKeyword(it->second, SourceFile::iterator_range(begin, iter));
-      }
-      else if (string == "true") {
-        token = Token::createBooleanLiteral(true, SourceFile::iterator_range(begin, iter));
-      }
-      else if (string == "false") {
-        token = Token::createBooleanLiteral(false, SourceFile::iterator_range(begin, iter));
-      }
-      else {
-        token = Token::createIdentifier(string, SourceFile::iterator_range(begin, iter));
-      }
-      return;
+      } while (iter != end
+               && (isDigit(*iter) || isLetter(*iter) || *iter == '_'));
+      if (auto keyword = string2Keyword(string))
+        return Token::createKeyword(*keyword, begin, iter);
+      else if (string == "true")
+        return Token::createBooleanLiteral(true, begin, iter);
+      else if (string == "false")
+        return Token::createBooleanLiteral(false, begin, iter);
+      else
+        return Token::createIdentifier(std::move(string), begin, iter);
     }
 
     case '.':
@@ -552,15 +534,13 @@ static void lex(SourceFile& source_file, Token& token, SourceFile::iterator iter
     case '8':
     case '9':
     {
-      auto begin = iter;
       std::string number;
       if (*iter == '.') {
         // found the character .
         ++iter;
         if (iter == end || !isDigit(*iter)) {
           // just the character .
-          token = Token::createSymbol(Symbol::Period, SourceFile::iterator_range(begin, iter));
-          return;
+          return Token::createSymbol(Symbol::Period, begin, iter);
         }
         // digits after the .
         number += '.';
@@ -585,11 +565,13 @@ static void lex(SourceFile& source_file, Token& token, SourceFile::iterator iter
         else if (iter == end || *iter != 'e' || *iter != 'E') {
           // no . found. check for 'e' or 'E' and if those are not there the
           // number must be an integer
-          if (iter != end && (isLetter(*iter) || *iter == '_')) {
-            throw make_runtime_error("letter appears in number literal", '\n', source_file.highlight(iter));
-          }
-          token = Token::createIntegerLiteral(boost::numeric_cast<std::int64_t>(std::stoll(number)), SourceFile::iterator_range(begin, iter));
-          return;
+          if (iter != end && (isLetter(*iter) || *iter == '_'))
+            throw make_error<LexerError>("letter appears in number literal:\n",
+              source_file.highlight(iter));
+          return Token::createIntegerLiteral(
+            boost::numeric_cast<std::int64_t>(std::stoll(number)),
+            begin, iter
+          );
         }
       }
       // the number must be a float
@@ -600,56 +582,65 @@ static void lex(SourceFile& source_file, Token& token, SourceFile::iterator iter
           number += *iter;
           ++iter;
         }
-        if (iter == end) {
-          throw make_runtime_error("end of file in real literal");
-        }
-        else if (!isDigit(*iter)) {
-          throw make_runtime_error("expected number in real literal exponent");
-        }
+        if (iter == end)
+          throw make_error<LexerError>("file ends in real literal starting here"
+            ":\n", source_file.highlight(begin));
+        else if (!isDigit(*iter))
+          throw make_error<LexerError>("expected digit in real literal exponent"
+            ":\n", source_file.highlight(iter));
         do {
           number += *iter;
           ++iter;
         } while (iter != end && isDigit(*iter));
       }
-      if (iter != end && (isLetter(*iter) || *iter == '_')) {
-        throw make_runtime_error("letter appears in number literal", '\n', source_file.highlight(iter));
-      }
-      token = Token::createRealLiteral(std::stod(number), SourceFile::iterator_range(begin, iter));
-      return;
+      if (iter != end && (isLetter(*iter) || *iter == '_'))
+        throw make_error<LexerError>("letter appears in number literal:\n",
+          source_file.highlight(iter));
+      return Token::createRealLiteral(std::stod(number), begin, iter);
     }
 
     default:
-      throw make_runtime_error("unknown");
+    {
+      std::string character;
+      utf8::append(*iter, std::back_inserter(character));
+      std::stringstream character_hex;
+      character_hex << std::hex << std::setfill('0') << std::setw(5)<< *iter;
+      throw make_error<LexerError>("unidentified character '", character, "' (",
+        "U+", character_hex.str(), ") in source code:\n",
+        source_file.highlight(iter));
+    }
   }
 }
 
-Lexer::LexerIterator::LexerIterator(SourceFile& source_file)
-: m_source_file{source_file},
-  m_token{std::make_unique<Token>()},
-  m_end{}
+Lexer::LexerIterator::LexerIterator()
+: m_source_file{nullptr},
+  m_token{}
 {}
 
-Lexer::LexerIterator::LexerIterator(SourceFile& source_file, SourceFile::iterator iter, SourceFile::iterator end)
-: m_source_file{source_file},
-  m_token{std::make_unique<Token>()},
-  m_end{end}
+Lexer::LexerIterator::LexerIterator(
+  SourceFile& source_file,
+  SourceFile::iterator iter)
+: m_source_file{&source_file},
+  m_token{}
 {
-  lex(m_source_file, *m_token, iter, end);
+  m_token = lex(*m_source_file, iter);
 }
 
 void Lexer::LexerIterator::increment()
 {
-  lex(m_source_file, *m_token, m_token->end(), m_end);
+  m_token = lex(*m_source_file, m_token.end());
 }
 
 bool Lexer::LexerIterator::equal(LexerIterator const& other) const
 {
-  return m_token->begin() == other.m_token->begin();
+  if (m_token.begin() == other.m_token.begin())
+    assert(m_token == other.m_token);
+  return m_token.begin() == other.m_token.begin();
 }
 
-Token& Lexer::LexerIterator::dereference() const
+Token Lexer::LexerIterator::dereference() const
 {
-  return *m_token;
+  return m_token;
 }
 
 Lexer::Lexer(const char* path)
@@ -658,17 +649,17 @@ Lexer::Lexer(const char* path)
 
 Lexer::iterator Lexer::begin()
 {
-  return iterator(m_source_file, m_source_file.begin(), m_source_file.end());
+  return iterator(m_source_file, m_source_file.begin());
 }
 
 Lexer::iterator Lexer::end()
 {
-  return iterator(m_source_file, m_source_file.end(), m_source_file.end());
+  return iterator(m_source_file, m_source_file.end());
 }
 
 void Lexer::highlight(std::ostream& stream, Token token)
 {
-  m_source_file.highlight(stream, SourceFile::iterator_range(token.begin(), token.end()));
+  m_source_file.highlight(stream, token.begin(), token.end());
 }
 
 void Lexer::highlight(std::ostream& stream, std::forward_list<Token> tokens)
@@ -681,4 +672,18 @@ void Lexer::highlight(std::ostream& stream, std::forward_list<Token> tokens)
     boost::make_transform_iterator(tokens.end(), function)
   };
   m_source_file.highlight(stream, ranges);
+}
+
+std::string Lexer::highlight(Token token)
+{
+  std::stringstream ss;
+  highlight(ss, std::move(token));
+  return ss.str();
+}
+
+std::string Lexer::highlight(std::forward_list<Token> tokens)
+{
+  std::stringstream ss;
+  highlight(ss, std::move(tokens));
+  return ss.str();
 }

@@ -1,3 +1,15 @@
+// Copyright (C) 2019  Claire Hansel
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
 #ifndef BUCKET_MISCELLANEOUS_HXX
 #define BUCKET_MISCELLANEOUS_HXX
 
@@ -12,12 +24,47 @@
 #include <type_traits>
 #include <utility>
 
-#if __GCC__ || __clang__
-  #define BUCKET_UNREACHABLE() __builtin_unreachable()
+#ifdef BUCKET_HIGHLIGHTING_OFF
+  #define BUCKET_BOLD  ""
+  #define BUCKET_BLACK ""
+  #define BUCKET_RED   ""
 #else
-  #define BUCKET_UNREACHABLE() assert(false)
+  #define BUCKET_BOLD  "\033[1;30m"
+  #define BUCKET_BLACK "\033[0;30m"
+  #define BUCKET_RED   "\033[0;31m"
 #endif
 
+#ifdef BUCKET_DEBUG
+  #define BUCKET_UNREACHABLE() assert(false)
+#elif __GCC__ || __clang__
+  #define BUCKET_UNREACHABLE() __builtin_unreachable()
+#else
+  #define BUCKET_UNREACHABLE()
+#endif
+
+class CompilerError : public std::runtime_error {
+public:
+  explicit CompilerError(const char* msg)
+  : std::runtime_error(msg)
+  {}
+  virtual std::string_view errorName() = 0;
+};
+
+class GeneralError : public CompilerError {
+public:
+  explicit GeneralError(const char* msg)
+  : CompilerError(msg)
+  {}
+  std::string_view errorName() override {return "General Error";}
+};
+
+class LexerError : public CompilerError {
+public:
+  explicit LexerError(const char* msg)
+  : CompilerError(msg)
+  {}
+  std::string_view errorName() override {return "Lexer Error";}
+};
 
 namespace details {
 
@@ -414,16 +461,16 @@ decltype(auto) concatenateAndCall(FunctionType&& function, Args&&... args)
   );
 }
 
-template <typename... Args>
-std::runtime_error make_runtime_error(Args&&... args)
+template <typename Error, typename... Args>
+auto make_error(Args&&... args)
 // Converts an arbitrary number of arguments to strings, concatenates them, and
-// then returns a std::runtime_error object created with the concatenated
-// string. Note: this does not throw the std::runtime_error but just returns it.
+// then returns an error object created with the concatenated string. Note: this
+// does not throw the error but just returns it.
 {
   return concatenateAndCall(
     [](std::string_view string){
       assert(string.find('\0') == string.size() - 1);
-      return std::runtime_error(string.data());
+      return Error(string.data());
     },
     std::forward<Args>(args)...,
     '\0'
