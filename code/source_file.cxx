@@ -115,11 +115,7 @@ void SourceFile::highlight(
   iterator range_end)
 {
   assert(range_begin != range_end);
-  #ifdef BUCKET_DEBUG
-    auto range_begin_plus_one = range_begin;
-    ++range_begin_plus_one;
-    assert(range_begin_plus_one != range_end);
-  #endif
+  
   // print header
   auto [line, column] = getLineAndColumn(range_begin);
   stream << "file '" BUCKET_BOLD << m_path << BUCKET_BLACK "': starting from li"

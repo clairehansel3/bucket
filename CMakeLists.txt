@@ -3,7 +3,7 @@ project(bucket VERSION 0.0.0 LANGUAGES CXX)
 
 find_package(Boost 1.66 COMPONENTS)
 
-add_library(bucket code/source_file.cxx code/token.cxx code/lexer.cxx)
+add_library(bucket code/source_file.cxx code/token.cxx code/lexer.cxx code/abstract_syntax_tree.cxx)
 set_target_properties(bucket PROPERTIES CXX_EXTENSIONS OFF CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 target_include_directories(bucket PRIVATE code)
 

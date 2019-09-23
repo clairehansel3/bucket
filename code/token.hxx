@@ -144,7 +144,7 @@ private:
 
 };
 
-std::ostream& operator<< (std::ostream& out, const Token& token);
+std::ostream& operator<< (std::ostream& stream, const Token& token);
 // Custom print function for the Token class
 
 #endif

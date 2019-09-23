@@ -66,6 +66,14 @@ public:
   std::string_view errorName() override {return "Lexer Error";}
 };
 
+class ParserError : public CompilerError {
+public:
+  explicit ParserError(const char* msg)
+  : CompilerError(msg)
+  {}
+  std::string_view errorName() override {return "Parser Error";}
+};
+
 namespace details {
 
 // There is no template in type_traits to determine if a type is an integer, so
