@@ -62,6 +62,7 @@ private:
   std::unique_ptr<ast::Integer> parseIntegerLiteral();
   std::unique_ptr<ast::String> parseStringLiteral();
   std::unique_ptr<ast::Character> parseCharacterLiteral();
+  std::unique_ptr<ast::Boolean> parseBooleanLiteral();
 
   bool accept(Keyword);
   bool accept(Symbol);

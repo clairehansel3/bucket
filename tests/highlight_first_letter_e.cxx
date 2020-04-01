@@ -8,8 +8,10 @@ int main(int argc, char* argv[]) {
   std::cout.exceptions(std::ios_base::badbit | std::ios_base::failbit);
   std::cerr.exceptions(std::ios_base::badbit | std::ios_base::failbit);
   std::clog.exceptions(std::ios_base::badbit | std::ios_base::failbit);
-  if (argc != 2)
+  if (argc < 2)
     throw std::runtime_error("no file specified");
+  if (argc > 2)
+    throw std::runtime_error("extra arguments");
   SourceFile sourcefile{argv[1]};
   for (auto iter = sourcefile.begin(); iter != sourcefile.end(); ++iter) {
     if (*iter == 'e') {

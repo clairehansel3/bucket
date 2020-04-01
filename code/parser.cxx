@@ -100,6 +100,11 @@ std::unique_ptr<ast::Method> Parser::parseMethod()
     if (!(method_ptr->return_type = parseExpression()))
       throw make_error<ParserError>("<todo>:" LINE_STRING);
   }
+  else {
+    auto id = std::make_unique<ast::Identifier>();
+    id->value = "nil";
+    method_ptr->return_type = std::move(id);
+  }
   expect(Symbol::Newline);
   method_ptr->statements = parseStatements();
   expect(Keyword::End);
@@ -156,9 +161,9 @@ std::unique_ptr<ast::Statement> Parser::parseStatement()
 
 std::unique_ptr<ast::Declaration> Parser::parseDeclaration()
 {
-  if (auto name = acceptIdentifier()) {
+  if (accept(Keyword::Decl)) {
     auto declaration_ptr = std::make_unique<ast::Declaration>();
-    declaration_ptr->name = std::move(*name);
+    declaration_ptr->name = expectIdentifier();
     expect(Symbol::Colon);
     if (!(declaration_ptr->type = parseExpression()))
       throw make_error<ParserError>("<todo>:" LINE_STRING);
@@ -583,6 +588,9 @@ std::unique_ptr<ast::Expression> Parser::parseSimpleExpression()
   else if (auto character_literal_ptr = parseCharacterLiteral()) {
     return character_literal_ptr;
   }
+  else if (auto boolean_literal_ptr = parseBooleanLiteral()) {
+    return boolean_literal_ptr;
+  }
   else {
     return nullptr;
   }
@@ -651,6 +659,17 @@ std::unique_ptr<ast::Character> Parser::parseCharacterLiteral()
   else {
     return nullptr;
   }
+}
+
+std::unique_ptr<ast::Boolean> Parser::parseBooleanLiteral()
+{
+  if (auto value = m_token_iter->getBooleanLiteral()) {
+    auto result = std::make_unique<ast::Boolean>();
+    result->value = *value;
+    ++m_token_iter;
+    return result;
+  }
+  return nullptr;
 }
 
 bool Parser::accept(Keyword keyword)

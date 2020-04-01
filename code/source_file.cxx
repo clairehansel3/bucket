@@ -13,7 +13,6 @@
 #include "source_file.hxx"
 #include "miscellaneous.hxx"
 #include <boost/numeric/conversion/cast.hpp>
-#include <cassert>
 #include <cstddef>
 #include <fstream>
 #include <optional>
@@ -25,7 +24,7 @@ SourceFile::SourceFile(const char* path)
 : m_path{path}
 {
   // read file at 'path' into buffer
-  assert(path);
+  BUCKET_ASSERT(path);
   try {
     std::ifstream file;
     file.exceptions(file.failbit | file.badbit);
@@ -45,8 +44,8 @@ SourceFile::SourceFile(const char* path)
   if (utf8::starts_with_bom(m_begin, m_end))
     m_begin += 3;
   if (!utf8::is_valid(m_begin, m_end))
-    throw make_error<GeneralError>("file '", m_path, "' contains invalid utf8"
-      "\n");
+    throw make_error<GeneralError>("file '", m_path, "' contains invalid utf8\n"
+      );
 }
 
 SourceFile::iterator SourceFile::begin()
@@ -114,8 +113,8 @@ void SourceFile::highlight(
   iterator range_begin,
   iterator range_end)
 {
-  assert(range_begin != range_end);
-  
+  BUCKET_ASSERT(range_begin != range_end);
+
   // print header
   auto [line, column] = getLineAndColumn(range_begin);
   stream << "file '" BUCKET_BOLD << m_path << BUCKET_BLACK "': starting from li"
@@ -227,7 +226,7 @@ void SourceFile::highlight(
         if (iter == range.first)
           ++new_highlight_depth;
         if (iter == range.second) {
-          assert(new_highlight_depth);
+          BUCKET_ASSERT(new_highlight_depth);
           --new_highlight_depth;
         }
       }
@@ -263,14 +262,14 @@ void SourceFile::highlight(
         if (iter == range.first)
           ++new_highlight_depth;
         if (iter == range.second) {
-          assert(new_highlight_depth);
+          BUCKET_ASSERT(new_highlight_depth);
           --new_highlight_depth;
         }
       }
 
       // check for end of line or file
       if (iter == end()) {
-        assert(!new_highlight_depth);
+        BUCKET_ASSERT(!new_highlight_depth);
         break;
       }
       if (*iter == '\n') {
@@ -324,8 +323,8 @@ void SourceFile::highlight(
       );
 
       any_line_was_highlighted = previous_line_was_highlighted = true;
-      assert(iter1 == iter2);
-      assert(depth1 == depth2);
+      BUCKET_ASSERT(iter1 == iter2);
+      BUCKET_ASSERT(depth1 == depth2);
       start_of_line = iter1;
       highlight_depth = depth1;
     }

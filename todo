@@ -1,0 +1,14 @@
+make sure make_error always has throw before it
+remove all instances of 'new'
+replace assert
+add comments
+put { on next line for functions
+initializeBuiltins _class -> _type
+maybe a uniform convention for _ptr, _uptr, _ast_, _sym_
+clean up lots of code
+double check pointer invalidation for symbol_table and maybe rethink code design
+add special syntax for functions like 'dereference' or 'addressof'
+update license to 2020
+add a namespace class
+replace receive with ast::dispatch?
+fix error messages

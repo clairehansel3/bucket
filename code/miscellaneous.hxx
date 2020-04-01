@@ -14,7 +14,13 @@
 #define BUCKET_MISCELLANEOUS_HXX
 
 #include <algorithm>
+#ifdef BUCKET_USE_ALLOCA
 #include <alloca.h>
+#endif
+#ifdef BUCKET_EXCEPTION_STACKTRACE
+#define _GNU_SOURCE
+#include <boost/stacktrace.hpp>
+#endif
 #include <cassert>
 #include <cstddef>
 #include <functional>
@@ -24,18 +30,30 @@
 #include <type_traits>
 #include <utility>
 
+#ifdef BUCKET_DEBUG
+[[noreturn]] void bucket_assert_fail(const char* assertion, const char* file,
+  unsigned line, const char* function);
+#if defined(__GNUC__) || defined(__clang__)
+#define BUCKET_ASSERT(e) ((e) ? (void)0 : bucket_assert_fail(#e, __FILE__, __LINE__, __PRETTY_FUNCTION__))
+#else
+#define BUCKET_ASSERT(e) ((e) ? (void)0 : bucket_assert_fail(#e, __FILE__, __LINE__, __func__))
+#endif
+#else
+#define BUCKET_ASSERT(e) (void)0
+#endif
+
 #ifdef BUCKET_HIGHLIGHTING_OFF
   #define BUCKET_BOLD  ""
   #define BUCKET_BLACK ""
   #define BUCKET_RED   ""
 #else
-  #define BUCKET_BOLD  "\033[1;30m"
-  #define BUCKET_BLACK "\033[0;30m"
+  #define BUCKET_BOLD  "\033[1;37m"
+  #define BUCKET_BLACK "\033[0;37m"
   #define BUCKET_RED   "\033[0;31m"
 #endif
 
 #ifdef BUCKET_DEBUG
-  #define BUCKET_UNREACHABLE() assert(false)
+  #define BUCKET_UNREACHABLE() BUCKET_ASSERT(false)
 #elif __GCC__ || __clang__
   #define BUCKET_UNREACHABLE() __builtin_unreachable()
 #else
@@ -48,6 +66,14 @@ public:
   : std::runtime_error(msg)
   {}
   virtual std::string_view errorName() = 0;
+};
+
+class AssertionError : public CompilerError {
+public:
+  explicit AssertionError(const char* msg)
+  : CompilerError(msg)
+  {}
+  std::string_view errorName() override {return "Assertion Error";}
 };
 
 class GeneralError : public CompilerError {
@@ -72,6 +98,14 @@ public:
   : CompilerError(msg)
   {}
   std::string_view errorName() override {return "Parser Error";}
+};
+
+class CodeGeneratorError : public CompilerError {
+public:
+  explicit CodeGeneratorError(const char* msg)
+  : CompilerError(msg)
+  {}
+  std::string_view errorName() override {return "Code Generator Error";}
 };
 
 namespace details {
@@ -317,6 +351,12 @@ struct TypeConverter<std::string_view>
   using type = std::string_view;
 };
 
+template <>
+struct TypeConverter<std::string_view&>
+{
+  using type = std::string_view;
+};
+
 template <std::size_t N>
 struct TypeConverter<const char (&) [N]>
 {
@@ -459,7 +499,12 @@ decltype(auto) concatenateAndCall(FunctionType&& function, Args&&... args)
   std::size_t size_as_string = details::lengthAsString(
     std::forward<Args>(args)...
   );
+  #ifdef BUCKET_USE_ALLOCA
   char* buf = static_cast<char*>(alloca(size_as_string));
+  #else
+  auto buf_uptr = std::make_unique<char[]>(size_as_string);
+  char* buf = buf_uptr.get();
+  #endif
   [[maybe_unused]] char* ptr = details::writeString(
     buf, std::forward<Args>(args)...
   );
@@ -481,6 +526,10 @@ auto make_error(Args&&... args)
       return Error(string.data());
     },
     std::forward<Args>(args)...,
+    #ifdef BUCKET_EXCEPTION_STACKTRACE
+    "\n" BUCKET_BOLD BUCKET_RED "Stack Trace:\n" BUCKET_BLACK,
+    boost::stacktrace::to_string(boost::stacktrace::stacktrace()),
+    #endif
     '\0'
   );
 }
@@ -491,11 +540,11 @@ std::string concatenate(Args&&... args) {
 // then returns the result.
   return concatenateAndCall(
     [](std::string_view string){
-      assert(string.find('\0') == string.size() - 1);
-      return std::string(string);
+      auto result = std::string(string);
+      assert(result[result.size()] == '\0');
+      return result;
     },
-    std::forward<Args>(args)...,
-    '\0'
+    std::forward<Args>(args)...
   );
 }
 

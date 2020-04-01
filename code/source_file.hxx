@@ -79,6 +79,8 @@ private:
   // are three bytes long).
 
   std::pair<unsigned, unsigned> getLineAndColumn(iterator position);
+  // Get line and column number from a file position. Note that these count from
+  // 1 not 0.
 
 };
 

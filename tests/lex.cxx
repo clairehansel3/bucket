@@ -1,5 +1,6 @@
 #include "lexer.hxx"
 #include "miscellaneous.hxx"
+#include "source_file.hxx"
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
@@ -12,10 +13,13 @@ int main(int argc, char* argv[]) {
   std::cout.exceptions(std::ios_base::badbit | std::ios_base::failbit);
   std::cerr.exceptions(std::ios_base::badbit | std::ios_base::failbit);
   std::clog.exceptions(std::ios_base::badbit | std::ios_base::failbit);
-  if (argc != 2)
+  if (argc < 2)
     throw std::runtime_error("no file specified");
+  if (argc > 2)
+    throw std::runtime_error("extra arguments");
   try {
-    Lexer lexer{argv[1]};
+    SourceFile source_file{argv[1]};
+    Lexer lexer{source_file};
     for (auto iter = lexer.begin(); iter != lexer.end(); ++iter) {
       std::cout << *iter << std::endl;
     }

@@ -12,10 +12,10 @@
 
 #include "lexer.hxx"
 #include "miscellaneous.hxx"
+#include "source_file.hxx"
 #include <algorithm>
 #include <boost/iterator/transform_iterator.hpp>
 #include <boost/numeric/conversion/cast.hpp>
-#include <cassert>
 #include <cstdint>
 #include <iomanip>
 #include <iterator>
@@ -646,7 +646,7 @@ void Lexer::LexerIterator::increment()
 bool Lexer::LexerIterator::equal(LexerIterator const& other) const
 {
   if (m_token.begin() == other.m_token.begin())
-    assert(m_token == other.m_token);
+    BUCKET_ASSERT(m_token == other.m_token);
   return m_token.begin() == other.m_token.begin();
 }
 
@@ -655,8 +655,8 @@ Token Lexer::LexerIterator::dereference() const
   return m_token;
 }
 
-Lexer::Lexer(const char* path)
-: m_source_file{path}
+Lexer::Lexer(SourceFile& source_file)
+: m_source_file{source_file}
 {}
 
 Lexer::iterator Lexer::begin()

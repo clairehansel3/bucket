@@ -31,6 +31,7 @@ std::string_view keyword2String(Keyword keyword)
     case Keyword::Not:    return "not";
     case Keyword::Class:  return "class";
     case Keyword::Method: return "method";
+    case Keyword::Decl:   return "decl";
   }
   BUCKET_UNREACHABLE();
 }
@@ -82,7 +83,8 @@ std::optional<Keyword> string2Keyword(std::string_view string)
     {"or",      Keyword::Or},
     {"not",     Keyword::Not},
     {"class",   Keyword::Class},
-    {"method",  Keyword::Method}
+    {"method",  Keyword::Method},
+    {"decl",    Keyword::Decl}
   };
   auto iter = keyword_dictionary.find(string);
   if (iter != keyword_dictionary.end()) {

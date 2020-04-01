@@ -22,7 +22,8 @@
 #include <variant>
 
 enum class Keyword {
-  End, If, Elif, Else, Do, For, Break, Cycle, Ret, And, Or, Not, Class, Method
+  End, If, Elif, Else, Do, For, Break, Cycle, Ret, And, Or, Not, Class, Method,
+  Decl
 };
 
 enum class Symbol {

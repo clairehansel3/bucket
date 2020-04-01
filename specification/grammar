@@ -32,8 +32,8 @@ statement =
   | "ret" , [ expression ] , newline
   | expression , newline ;
 
-field =
-  identifier , ":" , expression , newline;
+declaration =
+  "decl" , identifier , ":" , expression , newline;
 
 if =
   "if" , expression , newline , statements , { "elif" , expression , newline ,

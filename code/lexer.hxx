@@ -13,7 +13,6 @@
 #ifndef BUCKET_LEXER_HXX
 #define BUCKET_LEXER_HXX
 
-#include "source_file.hxx"
 #include "token.hxx"
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/noncopyable.hpp>
@@ -69,7 +68,7 @@ public:
 
   using iterator = LexerIterator;
 
-  explicit Lexer(const char* path);
+  explicit Lexer(SourceFile& source_file);
 
   iterator begin();
   iterator end();
@@ -87,7 +86,7 @@ public:
 
 private:
 
-  SourceFile m_source_file;
+  SourceFile& m_source_file;
 
 };
 
