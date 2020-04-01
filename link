@@ -1,4 +1,0 @@
-#!/bin/bash
-/Users/claire/Desktop/things/software/llvm-prefix/bin/llc -O3 result.bc -o result.s
-as result.s -o result.o
-ld result.o build/libbucketrt.a -lSystem -macosx_version_min 10.13.0 -e _main -o program && rm result.bc result.s result.o

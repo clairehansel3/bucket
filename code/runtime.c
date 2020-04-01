@@ -74,7 +74,6 @@ bucket_bool_t bucket_int_gt(const bucket_int_t* a, bucket_int_t b) {
   return *a > b;
 }
 
-bucket_nil_t bucket_syscall_hello_world(void)
-{
-  puts("Hello World!");
+bucket_nil_t bucket_int_print(const bucket_int_t* a) {
+  printf("%lld", *a);
 }

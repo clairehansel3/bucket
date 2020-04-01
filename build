@@ -1,6 +1,6 @@
 #!/bin/bash
-mkdir -p build
-cd build
+mkdir -p build2
+cd build2
 cmake .. -DLLVM_DIR=$THINGS/software/llvm-prefix/lib/cmake/llvm \
   -DCMAKE_BUILD_TYPE=Debug
 make

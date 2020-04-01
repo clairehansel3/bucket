@@ -28,6 +28,6 @@ bucket_bool_t bucket_int_ne(const bucket_int_t*, bucket_int_t);
 bucket_bool_t bucket_int_ge(const bucket_int_t*, bucket_int_t);
 bucket_bool_t bucket_int_gt(const bucket_int_t*, bucket_int_t);
 
-bucket_nil_t bucket_syscall_hello_world(void);
+bucket_nil_t bucket_int_print(const bucket_int_t* a);
 
 #endif

@@ -48,6 +48,7 @@ int main(int argc, char* argv[]) {
     ast::dispatch(program_ptr.get(), &third_pass);
     std::cout << BUCKET_BOLD "finalizing" BUCKET_BLACK << std::endl;
     finalizeModule(llvm_context, llvm_module, symbol_table);
+    llvm_module.dump();
     writeModule(llvm_module, argv[2]);
   } catch (CompilerError& ce) {
     std::cerr << std::string(terminal_width, '-') << "\n" BUCKET_RED

@@ -30,7 +30,7 @@
 
 #include <llvm/IR/Verifier.h>
 #include <llvm/Bitcode/BitcodeWriter.h>
-
+#include <iostream>
 /*
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/IRBuilder.h>
@@ -84,6 +84,7 @@ void initializeBuiltins(SymbolTable& symbol_table, llvm::LLVMContext& llvm_conte
 
   auto bool_class = symbol_table.createType("bool", llvm::IntegerType::getInt1Ty(llvm_context));
   auto int_class  = symbol_table.createType("int", llvm::IntegerType::getInt64Ty(llvm_context));
+  [[maybe_unused]] auto nil_class = symbol_table.createType("nil", llvm::Type::getVoidTy(llvm_context));
   symbol_table.pushScope("bool");
   registerBuiltinMethod(bool_class, "__and__", {bool_class}, bool_class, "bucket_bool_and");
   registerBuiltinMethod(bool_class, "__or__", {bool_class}, bool_class, "bucket_bool_or");
@@ -100,8 +101,8 @@ void initializeBuiltins(SymbolTable& symbol_table, llvm::LLVMContext& llvm_conte
   registerBuiltinMethod(int_class, "__eq__", {int_class}, bool_class, "bucket_int_eq");
   registerBuiltinMethod(int_class, "__ge__", {int_class}, bool_class, "bucket_int_ge");
   registerBuiltinMethod(int_class, "__gt__", {int_class}, bool_class, "bucket_int_gt");
+  registerBuiltinMethod(int_class, "print", {}, nil_class, "bucket_int_print");
   symbol_table.popScope();
-  [[maybe_unused]] auto nil_class = symbol_table.createType("nil", llvm::Type::getVoidTy(llvm_context));
   auto syscall_class = symbol_table.createType("syscall", nullptr);
   symbol_table.pushScope("syscall");
   auto registerSyscall = [&symbol_table, &llvm_module](
@@ -117,7 +118,6 @@ void initializeBuiltins(SymbolTable& symbol_table, llvm::LLVMContext& llvm_conte
     method->m_llvm_function = llvm::Function::Create(llvm::FunctionType::get(return_class->m_llvm_type, llvm_args, false),
       llvm::Function::ExternalLinkage, llvm::StringRef(link_name.data(), link_name.size()), llvm_module);
   };
-  registerSyscall("hello_world", {}, nil_class, "bucket_syscall_hello_world");
   symbol_table.popScope();
 }
 
@@ -372,9 +372,44 @@ void ThirdPass::visit(ast::ExpressionStatement* expression_statement_ptr)
   ast::dispatch(expression_statement_ptr->expression.get(), this);
 }
 
-void ThirdPass::visit(ast::Assignment* if_ptr)
+void ThirdPass::visit(ast::Assignment* assignment_ptr)
 {
-  BUCKET_UNREACHABLE();
+  // Check if method has already returned
+  if (m_method_returned)
+    throw make_error<CodeGeneratorError>("code after method has returned");
+
+  // Get name of lhs variable
+  std::string lhs;
+  {
+    auto lhs_identifier = ast::ast_cast<ast::Identifier*>(assignment_ptr->left.get());
+    if (!lhs_identifier)
+      throw make_error<CodeGeneratorError>("left hand side of assignment statement must be an identifier");
+    lhs = lhs_identifier->value;
+  }
+
+  // Visit rhs
+  assignment_ptr->right->receive(this);
+
+  SymbolTable::Variable* lhs_variable;
+  if (auto entry = m_symbol_table.lookup(lhs)) {
+    // lhs is already defined
+    lhs_variable = SymbolTable::sym_cast<SymbolTable::Variable*>(entry);
+    if (!lhs_variable)
+      throw make_error<CodeGeneratorError>("left hand side of assignment statement is not a variable");
+    if (lhs_variable->m_type != m_current_value_class)
+      throw make_error<CodeGeneratorError>("type mismatch");
+  }
+  else {
+    lhs_variable = createAllocaVariable(lhs, m_current_value_class);
+  }
+  std::cout << "lhs = " << lhs << std::endl;
+  std::cout << "m_current_value";
+  m_current_value->dump();
+  std::cout << std::endl << "lhs_variable = " << lhs_variable->path() << std::endl;
+  std::cout << std::endl << "lhs_variable type = " << lhs_variable->m_type->path() << std::endl;
+  lhs_variable->m_llvm_value->dump();
+  std::cout << std::endl;
+  m_llvm_ir_builder.CreateStore(m_current_value, lhs_variable->m_llvm_value);
 }
 
 void ThirdPass::visit(ast::Call* call_ptr)
@@ -393,17 +428,43 @@ void ThirdPass::visit(ast::Call* call_ptr)
   // find the method
   auto found = m_symbol_table.lookupInScope(concatenate(m_current_value_class->path(), '/'), call_ptr->name);
   if (!found)
-    throw std::runtime_error("unknown method");
+    throw std::runtime_error(concatenate("unknown method '", call_ptr->name, '\''));
   auto method = SymbolTable::sym_cast<SymbolTable::Method*>(found);
   if (!method)
     throw std::runtime_error("not a method");
+
+  std::vector<llvm::Value*> arguments;
   if (m_current_value_class->m_llvm_type) {
-    // call on object
-    BUCKET_UNREACHABLE();
+    BUCKET_ASSERT(m_current_value);
+    arguments.resize(method->m_argument_types.size() + 1);
+    std::cout << m_current_value_class->path() << std::endl;
+    m_current_value->dump();
+    std::cout << m_current_method->path() << std::endl;
+    m_current_method->m_llvm_function->dump();
+    llvm::IRBuilder<> temporary_ir_builder{&m_current_method->m_llvm_function->getEntryBlock(), m_current_method->m_llvm_function->getEntryBlock().begin()};
+    auto alloca_inst = temporary_ir_builder.CreateAlloca(m_current_value_class->m_llvm_type, 0, nullptr, "temp");
+    m_llvm_ir_builder.CreateStore(m_current_value, alloca_inst);
+    arguments[0] = alloca_inst;
+    if (method->m_argument_types.size() != call_ptr->arguments.size())
+      throw std::runtime_error("argument count mismatch");
+    auto argument_class_iter = method->m_argument_types.begin();
+    auto argument_expression_iter = call_ptr->arguments.begin();
+    auto argument_iter = arguments.begin() + 1;
+    while (argument_iter != arguments.end()) {
+      (*argument_expression_iter)->receive(this);
+      if (!m_current_value)
+        throw std::runtime_error("cannot pass a class to a method");
+      if (m_current_value_class != *argument_class_iter)
+        throw std::runtime_error("argument class mismatch");
+      *argument_iter = m_current_value;
+      ++argument_class_iter;
+      ++argument_expression_iter;
+      ++argument_iter;
+    }
   }
   else {
     // call on namespace
-    std::vector<llvm::Value*> arguments{method->m_argument_types.size()};
+    arguments.resize(method->m_argument_types.size());
     if (m_current_value)
       BUCKET_UNREACHABLE();
     if (method->m_argument_types.size() != call_ptr->arguments.size())
@@ -422,9 +483,9 @@ void ThirdPass::visit(ast::Call* call_ptr)
       ++argument_expression_iter;
       ++argument_iter;
     }
-    m_current_value = m_llvm_ir_builder.CreateCall(method->m_llvm_function, arguments);
-    m_current_value_class = method->m_return_type;
   }
+  m_current_value = m_llvm_ir_builder.CreateCall(method->m_llvm_function, arguments);
+  m_current_value_class = method->m_return_type;
 }
 
 void ThirdPass::visit(ast::Identifier* identifier_ptr)
@@ -436,6 +497,10 @@ void ThirdPass::visit(ast::Identifier* identifier_ptr)
     m_current_value_class = type;
     m_current_value = nullptr;
   }
+  else if (auto value = SymbolTable::sym_cast<SymbolTable::Variable*>(entry)) {
+    m_current_value_class = value->m_type;
+    m_current_value = m_llvm_ir_builder.CreateLoad(value->m_llvm_value);
+  }
   else {
     BUCKET_UNREACHABLE();
   }
@@ -446,9 +511,11 @@ void ThirdPass::visit(ast::Real* if_ptr)
   BUCKET_UNREACHABLE();
 }
 
-void ThirdPass::visit(ast::Integer* if_ptr)
+void ThirdPass::visit(ast::Integer* int_ast_ptr)
 {
-  BUCKET_UNREACHABLE();
+  auto int_sym_type = m_symbol_table.lookupKnownPath<SymbolTable::Type>("/int");
+  m_current_value_class = int_sym_type;
+  m_current_value = llvm::ConstantInt::getSigned(int_sym_type->m_llvm_type, int_ast_ptr->value);
 }
 
 void ThirdPass::visit(ast::Boolean* boolean_ptr)
