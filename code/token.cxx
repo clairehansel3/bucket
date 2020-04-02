@@ -62,7 +62,7 @@ std::string_view symbol2String(Symbol symbol)
     case Symbol::Colon:                   return ":";
     case Symbol::AtSymbol:                return "@";
     case Symbol::Ampersand:               return "&";
-    case Symbol::Newline:                 return "\n";
+    case Symbol::Newline:                 return "\\n";
   }
   BUCKET_UNREACHABLE();
 }
@@ -342,31 +342,31 @@ Token::Token(
 std::ostream& operator<< (std::ostream& stream, const Token& token)
 {
   if (auto value = token.getIdentifier()) {
-    return stream << "<identifier(" << *value << ")> ";
+    return stream << "<identifier(" << *value << ")>\n";
   }
   else if (auto value = token.getKeyword()) {
-    return stream << "<keyword(" << keyword2String(*value) << ")> ";
+    return stream << "<keyword(" << keyword2String(*value) << ")>\n";
   }
   else if (auto value = token.getSymbol()) {
-    return stream << "<symbol(" << symbol2String(*value) << ")> ";
+    return stream << "<symbol(" << symbol2String(*value) << ")>\n";
   }
   else if (auto value = token.getIntegerLiteral()) {
-    return stream << "<integer(" << *value << ")> ";
+    return stream << "<integer(" << *value << ")>\n";
   }
   else if (auto value = token.getRealLiteral()) {
-    return stream << "<real(" << *value << ")> ";
+    return stream << "<real(" << *value << ")>\n";
   }
   else if (auto value = token.getStringLiteral()) {
-    return stream << "<string(" << *value << ")> ";
+    return stream << "<string(" << *value << ")>\n";
   }
   else if (auto value = token.getCharacterLiteral()) {
-    return stream << "<character(" << *value << ")> ";
+    return stream << "<character(" << *value << ")>\n";
   }
   else if (auto value = token.getBooleanLiteral()) {
-    return stream << "<boolean(" << (*value ? "true" : "false") << ")> ";
+    return stream << "<boolean(" << (*value ? "true" : "false") << ")>\n";
   }
   else if (token.isEndOfFile()) {
-    return stream << "<eof> ";
+    return stream << "<eof>\n";
   }
   BUCKET_UNREACHABLE();
 }

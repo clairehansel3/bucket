@@ -37,7 +37,8 @@ std::string_view keyword2String(Keyword keyword);
 // Converts a keyword to a string (e.g. Keyword::Method becomes "method")
 
 std::string_view symbol2String(Symbol symbol);
-// Converts a symbol to a string (e.g. Symbol::Ampersand becomes "&")
+// Converts a symbol to a string (e.g. Symbol::Ampersand becomes "&"). Note that
+// Symbol::Newline becomes "\\n" and not "\n".
 
 std::optional<Keyword> string2Keyword(std::string_view string);
 // Converts a string to a keyword (e.g. "method" becomes Keyword::Method). If

@@ -13,3 +13,6 @@ add a namespace class
 replace receive with ast::dispatch?
 fix error messages
 is m_current_value_class necessary?
+make it compile on other computers
+make the code not bad
+yeet iostream library

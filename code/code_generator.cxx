@@ -28,9 +28,14 @@
 #include <utility>
 #include <vector>
 
+#include <llvm/Analysis/InstructionSimplify.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Bitcode/BitcodeWriter.h>
 #include <iostream>
+#include <llvm/IR/IRPrintingPasses.h>
+#include <llvm/Support/raw_ostream.h>
+#include <llvm/ADT/StringRef.h>
+
 /*
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/IRBuilder.h>
@@ -402,13 +407,6 @@ void ThirdPass::visit(ast::Assignment* assignment_ptr)
   else {
     lhs_variable = createAllocaVariable(lhs, m_current_value_class);
   }
-  std::cout << "lhs = " << lhs << std::endl;
-  std::cout << "m_current_value";
-  m_current_value->dump();
-  std::cout << std::endl << "lhs_variable = " << lhs_variable->path() << std::endl;
-  std::cout << std::endl << "lhs_variable type = " << lhs_variable->m_type->path() << std::endl;
-  lhs_variable->m_llvm_value->dump();
-  std::cout << std::endl;
   m_llvm_ir_builder.CreateStore(m_current_value, lhs_variable->m_llvm_value);
 }
 
@@ -437,10 +435,6 @@ void ThirdPass::visit(ast::Call* call_ptr)
   if (m_current_value_class->m_llvm_type) {
     BUCKET_ASSERT(m_current_value);
     arguments.resize(method->m_argument_types.size() + 1);
-    std::cout << m_current_value_class->path() << std::endl;
-    m_current_value->dump();
-    std::cout << m_current_method->path() << std::endl;
-    m_current_method->m_llvm_function->dump();
     llvm::IRBuilder<> temporary_ir_builder{&m_current_method->m_llvm_function->getEntryBlock(), m_current_method->m_llvm_function->getEntryBlock().begin()};
     auto alloca_inst = temporary_ir_builder.CreateAlloca(m_current_value_class->m_llvm_type, 0, nullptr, "temp");
     m_llvm_ir_builder.CreateStore(m_current_value, alloca_inst);
@@ -576,4 +570,87 @@ void writeModule(llvm::Module& llvm_module, std::string_view output_file)
   llvm::raw_fd_ostream stream{llvm::StringRef(output_file.data(), output_file.size()), code, llvm::sys::fs::F_None};
   llvm::WriteBitcodeToFile(llvm_module, stream);
   stream.flush();
+}
+
+#include <system_error>
+void printModuleIR(llvm::Module& llvm_module, std::optional<std::string> output_path_optional)
+{
+  std::string name = output_path_optional ? *output_path_optional : std::string("-");
+  std::error_code ec;
+  llvm::raw_fd_ostream ostream{llvm::StringRef(name.data(), name.size()), ec};
+  llvm_module.print(ostream, nullptr);
+  //llvm::PrintModulePass pmp{ostream};
+  //llvm::AnalysisManager am;
+  //pmp.run(llvm_module, am);
+}
+
+void printModuleBC(llvm::Module& llvm_module, std::optional<std::string> output_path_optional)
+{
+  std::string name = output_path_optional ? *output_path_optional : std::string("-");
+  std::error_code ec;
+  llvm::raw_fd_ostream ostream{llvm::StringRef(name.data(), name.size()), ec};
+  llvm::WriteBitcodeToFile(llvm_module, ostream);
+}
+
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Verifier.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Host.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOptions.h"
+
+void printModuleOBJ(llvm::Module& llvm_module, std::optional<std::string> output_path_optional)
+{
+  std::string name = output_path_optional ? *output_path_optional : std::string("-");
+  std::error_code ec;
+  llvm::raw_fd_ostream dest{llvm::StringRef(name.data(), name.size()), ec};
+
+  llvm::InitializeAllTargetInfos();
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmParsers();
+  llvm::InitializeAllAsmPrinters();
+
+  auto TargetTriple = llvm::sys::getDefaultTargetTriple();
+  llvm_module.setTargetTriple(TargetTriple);
+
+  std::string Error;
+  auto Target = llvm::TargetRegistry::lookupTarget(TargetTriple, Error);
+
+  BUCKET_ASSERT(Target);
+
+  auto CPU = "generic";
+  auto Features = "";
+
+  llvm::TargetOptions opt;
+  auto RM = llvm::Optional<llvm::Reloc::Model>();
+  auto TheTargetMachine =
+      Target->createTargetMachine(TargetTriple, CPU, Features, opt, RM);
+
+  llvm_module.setDataLayout(TheTargetMachine->createDataLayout());
+
+  llvm::legacy::PassManager pass;
+  auto FileType = llvm::CGFT_ObjectFile;
+
+  if (TheTargetMachine->addPassesToEmitFile(pass, dest, nullptr, FileType)) {
+    assert(false);
+  }
+
+  pass.run(llvm_module);
+  dest.flush();
 }

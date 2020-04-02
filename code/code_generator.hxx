@@ -17,6 +17,7 @@
 #include "abstract_syntax_tree.hxx"
 #include <llvm/IR/IRBuilder.h>
 #include <stack>
+#include <string>
 #include <utility>
 
 namespace llvm {
@@ -100,5 +101,11 @@ private:
 void finalizeModule(llvm::LLVMContext& llvm_context, llvm::Module& llvm_module, SymbolTable& symbol_table);
 
 void writeModule(llvm::Module& llvm_module, std::string_view output_file);
+
+void printModuleIR(llvm::Module& llvm_module, std::optional<std::string> output_path_optional);
+
+void printModuleBC(llvm::Module& llvm_module, std::optional<std::string> output_path_optional);
+
+void printModuleOBJ(llvm::Module& llvm_module, std::optional<std::string> output_path_optional);
 
 #endif
