@@ -12,6 +12,7 @@ void run_compiler(
   bool parse,
   bool ir,
   bool bc,
+  bool asmb,
   bool obj,
   bool exec
 );

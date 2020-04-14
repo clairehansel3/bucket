@@ -27,6 +27,7 @@ int main(int argc, char* argv[])
       ("parse", "turns the input into an abstract syntax tree")
       ("ir", "compiles the input into readable llvm ir")
       ("bc", "compiles the input into llvm bitcode")
+      ("asm", "compiles the input into assembly")
       ("obj", "compiles the input into an object file")
       ("exec", "compiles and links the input into an executable")
     ;
@@ -67,6 +68,7 @@ int main(int argc, char* argv[])
         variables_map.count("parse"),
         variables_map.count("ir"),
         variables_map.count("bc"),
+        variables_map.count("asm"),
         variables_map.count("obj"),
         variables_map.count("exec")
       );

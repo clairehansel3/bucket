@@ -378,11 +378,11 @@ void CodeGenerator::finalize()
   llvm::raw_string_ostream stream{error_message};
   if (llvm::verifyModule(m_module, &stream)) {
     #ifdef BUCKET_DEBUG
-    throw make_error<CodeGeneratorError>("<internal compiler error>");
-    #else
     throw make_error<CodeGeneratorError>("failed to verify llvm module:\n",
       stream.str()
     );
+    #else
+    throw make_error<CodeGeneratorError>("<internal compiler error>");
     #endif
   }
 }
@@ -501,11 +501,11 @@ void CodeGenerator::visit(ast::Method* ast_method)
   llvm::raw_string_ostream stream{error_message};
   if (llvm::verifyFunction(*m_current_method->m_llvm_function, &stream)) {
     #ifdef BUCKET_DEBUG
-    throw make_error<CodeGeneratorError>("<internal compiler error>");
-    #else
     throw make_error<CodeGeneratorError>("failed to verify llvm function:\n",
       stream.str()
     );
+    #else
+    throw make_error<CodeGeneratorError>("<internal compiler error>");
     #endif
   }
 
@@ -787,7 +787,7 @@ void CodeGenerator::visit(ast::Assignment* ast_assignment)
   }
 
   // Visit rhs
-  ast::dispatch(ast_assignment, this);
+  ast::dispatch(ast_assignment->right.get(), this);
 
   if (!m_expression_value)
     throw make_error<CodeGeneratorError>("right hand side of assignment must be"
@@ -844,9 +844,9 @@ void CodeGenerator::visit(ast::Call* ast_call)
     m_ir_builder.SetInsertPoint(m_scope_entry_block, m_scope_entry_block->begin());
     auto alloca_inst = m_ir_builder.CreateAlloca(m_expression_type->m_llvm_type,
       0, nullptr, "temp");
+    m_ir_builder.restoreIP(old_insertion_point);
     m_ir_builder.CreateStore(m_expression_value, alloca_inst);
     arguments[0] = alloca_inst;
-    m_ir_builder.restoreIP(old_insertion_point);
     if (method->m_argument_types.size() != ast_call->arguments.size())
       throw make_error<CodeGeneratorError>("argument count mismatch when callin"
         "g method '", ast_call->name, "' on type '", m_expression_type->path(),

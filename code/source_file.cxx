@@ -317,7 +317,7 @@ void SourceFile::highlight(
 
       // underline line
       stream << '|';
-      auto [iter2, depth2] = highlightCharacters(
+      [[maybe_unused]] auto [iter2, depth2] = highlightCharacters(
         [&stream](iterator){stream << ' ';},
         [&stream](iterator){stream << '^';}
       );

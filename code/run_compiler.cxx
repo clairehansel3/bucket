@@ -20,11 +20,12 @@ void run_compiler(
   bool parse,
   bool ir,
   bool bc,
+  bool asmb,
   bool obj,
   bool exec
 )
 {
-  if (!(read || lex || parse || ir || bc || obj || exec))
+  if (!(read || lex || parse || ir || bc || asmb || obj || exec))
     exec = true;
 
   std::ofstream output_file_stream;
@@ -51,7 +52,7 @@ void run_compiler(
     }
   }
 
-  if (!(lex || parse || ir || bc || obj || exec))
+  if (!(lex || parse || ir || bc || asmb || obj || exec))
     return;
 
   Lexer lexer{source_file};
@@ -60,7 +61,7 @@ void run_compiler(
     for (auto token : lexer)
       *output_stream_ptr << token;
 
-  if (!(parse || ir || bc || obj || exec))
+  if (!(parse || ir || bc || asmb || obj || exec))
     return;
 
   Parser parser{lexer};
@@ -69,7 +70,7 @@ void run_compiler(
   if (parse)
     *output_stream_ptr << *ast_program;
 
-  if (!(ir || bc || obj || exec))
+  if (!(ir || bc || asmb || obj || exec))
     return;
 
   CodeGenerator code_generator{};
@@ -78,13 +79,13 @@ void run_compiler(
   if (ir)
     code_generator.printIR(output_path_optional);
 
-  if (!(bc || obj || exec))
+  if (!(bc || asmb || obj || exec))
     return;
 
   if (bc)
     code_generator.printBC(output_path_optional);
 
-  if (!(obj || exec))
+  if (!(asmb || obj || exec))
     return;
 
   throw make_error<GeneralError>("use llc/lld to create object files and executables");
