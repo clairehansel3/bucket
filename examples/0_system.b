@@ -1,6 +1,6 @@
 class main
   method main(): bool
-    syscall.hello_world()
+    system.test()
     ret true
   end
 end

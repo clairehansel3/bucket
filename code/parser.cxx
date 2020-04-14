@@ -406,10 +406,10 @@ std::unique_ptr<ast::Expression> Parser::parseArithmeticExpression()
     auto new_call_ptr = std::make_unique<ast::Call>();
     new_call_ptr->expression = std::move(call_ptr);
     new_call_ptr->name = std::move(name);
-    auto argument = parseTerm();
-    if (!argument)
+    auto next_argument = parseTerm();
+    if (!next_argument)
       throw make_error<ParserError>("<todo>:" LINE_STRING);
-    new_call_ptr->arguments.push_back(std::move(argument));
+    new_call_ptr->arguments.push_back(std::move(next_argument));
     call_ptr = std::move(new_call_ptr);
   }
 }
@@ -447,10 +447,10 @@ std::unique_ptr<ast::Expression> Parser::parseTerm()
     auto new_call_ptr = std::make_unique<ast::Call>();
     new_call_ptr->expression = std::move(call_ptr);
     new_call_ptr->name = std::move(name);
-    auto argument = parseFactor();
-    if (!argument)
+    auto next_argument = parseFactor();
+    if (!next_argument)
       throw make_error<ParserError>("<todo>:" LINE_STRING);
-    new_call_ptr->arguments.push_back(std::move(argument));
+    new_call_ptr->arguments.push_back(std::move(next_argument));
     call_ptr = std::move(new_call_ptr);
   }
 }

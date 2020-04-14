@@ -13,6 +13,7 @@
 #ifndef BUCKET_ABSTRACT_SYNTAX_TREE_HXX
 #define BUCKET_ABSTRACT_SYNTAX_TREE_HXX
 
+#include "miscellaneous.hxx"
 #include <boost/noncopyable.hpp>
 #include <cstdint>
 #include <memory>
@@ -209,7 +210,7 @@ struct String final : Literal {
 };
 
 struct Character final : Literal {
-  std::string value;
+  std::uint32_t value;
   void receive(Visitor*) override;
 };
 
@@ -271,7 +272,9 @@ ToPtr ast_cast(FromPtr ptr)
     details::Caster<To> caster;
     const_cast<std::add_pointer_t<std::remove_const_t<From>>>(ptr)
       ->receive(&caster);
-    assert(caster.result == dynamic_cast<ToPtr>(ptr));
+    #ifdef BUCKET_RTTI_ENABLED
+    BUCKET_ASSERT(caster.result == dynamic_cast<ToPtr>(ptr));
+    #endif
     return caster.result;
   }
   return nullptr;

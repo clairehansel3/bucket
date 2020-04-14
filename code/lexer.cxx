@@ -439,13 +439,13 @@ static Token lex(SourceFile& source_file, SourceFile::iterator iter)
             break;
           default:
           {
-            std::string character;
+            std::string character_utf8;
             auto start_of_escape_sequence = begin;
             ++start_of_escape_sequence;
-            utf8::append(*iter, std::back_inserter(character));
+            utf8::append(*iter, std::back_inserter(character_utf8));
             ++iter;
             throw make_error<LexerError>("invalid escape sequence '\\",
-              character, "':\n", source_file.highlight(
+              character_utf8, "':\n", source_file.highlight(
                 start_of_escape_sequence, iter));
           }
         }
@@ -557,20 +557,20 @@ static Token lex(SourceFile& source_file, SourceFile::iterator iter)
         // digits after the .
         number += '.';
         do {
-          number += *iter;
+          number += static_cast<char>(*iter);
           ++iter;
         } while (iter != end && isDigit(*iter));
       }
       else {
         // read numbers
         do {
-          number += *iter;
+          number += static_cast<char>(*iter);
           ++iter;
         } while (iter != end && isDigit(*iter));
         if (iter != end && *iter == '.') {
           // . found, read numbers after .
           do {
-            number += *iter;
+            number += static_cast<char>(*iter);
             ++iter;
           } while (iter != end && isDigit(*iter));
         }
@@ -588,10 +588,10 @@ static Token lex(SourceFile& source_file, SourceFile::iterator iter)
       }
       // the number must be a float
       if (iter != end && (*iter == 'e' || *iter == 'E')) {
-        number += *iter;
+        number += static_cast<char>(*iter);
         ++iter;
         if (iter != end && (*iter == '+' | *iter == '-')) {
-          number += *iter;
+          number += static_cast<char>(*iter);
           ++iter;
         }
         if (iter == end)
@@ -601,7 +601,7 @@ static Token lex(SourceFile& source_file, SourceFile::iterator iter)
           throw make_error<LexerError>("expected digit in real literal exponent"
             ":\n", source_file.highlight(iter));
         do {
-          number += *iter;
+          number += static_cast<char>(*iter);
           ++iter;
         } while (iter != end && isDigit(*iter));
       }

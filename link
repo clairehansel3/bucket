@@ -1,0 +1,5 @@
+#!/bin/bash
+llc $1 -o temp.s
+as temp.s -o temp.o
+ld temp.o libbuiltin.a -lSystem -macosx_version_min 10.13.0 -e _main -o program
+rm temp.s temp.o

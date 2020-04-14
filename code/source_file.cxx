@@ -37,7 +37,7 @@ SourceFile::SourceFile(const char* path)
     m_buffer = std::make_unique<char[]>(file_size);
     m_begin  = m_buffer.get();
     m_end    = m_begin + file_size;
-    file.read(m_begin, file_size);
+    file.read(m_begin, boost::numeric_cast<std::streamsize>(file_size));
   } catch (const std::ifstream::failure&) {
     throw make_error<GeneralError>("unable to open file '", m_path, "'\n");
   }

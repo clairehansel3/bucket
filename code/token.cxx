@@ -341,29 +341,30 @@ Token::Token(
 
 std::ostream& operator<< (std::ostream& stream, const Token& token)
 {
-  if (auto value = token.getIdentifier()) {
-    return stream << "<identifier(" << *value << ")>\n";
+  if (auto identifier = token.getIdentifier()) {
+    return stream << "<identifier(" << *identifier << ")>\n";
   }
-  else if (auto value = token.getKeyword()) {
-    return stream << "<keyword(" << keyword2String(*value) << ")>\n";
+  else if (auto keyword = token.getKeyword()) {
+    return stream << "<keyword(" << keyword2String(*keyword) << ")>\n";
   }
-  else if (auto value = token.getSymbol()) {
-    return stream << "<symbol(" << symbol2String(*value) << ")>\n";
+  else if (auto symbol = token.getSymbol()) {
+    return stream << "<symbol(" << symbol2String(*symbol) << ")>\n";
   }
-  else if (auto value = token.getIntegerLiteral()) {
-    return stream << "<integer(" << *value << ")>\n";
+  else if (auto integer_literal = token.getIntegerLiteral()) {
+    return stream << "<integer(" << *integer_literal << ")>\n";
   }
-  else if (auto value = token.getRealLiteral()) {
-    return stream << "<real(" << *value << ")>\n";
+  else if (auto real_literal = token.getRealLiteral()) {
+    return stream << "<real(" << *real_literal << ")>\n";
   }
-  else if (auto value = token.getStringLiteral()) {
-    return stream << "<string(" << *value << ")>\n";
+  else if (auto string_literal = token.getStringLiteral()) {
+    return stream << "<string(" << *string_literal << ")>\n";
   }
-  else if (auto value = token.getCharacterLiteral()) {
-    return stream << "<character(" << *value << ")>\n";
+  else if (auto character_literal = token.getCharacterLiteral()) {
+    return stream << "<character(" << *character_literal << ")>\n";
   }
-  else if (auto value = token.getBooleanLiteral()) {
-    return stream << "<boolean(" << (*value ? "true" : "false") << ")>\n";
+  else if (auto boolean_literal = token.getBooleanLiteral()) {
+    return stream << "<boolean(" << (*boolean_literal ? "true" : "false")
+      << ")>\n";
   }
   else if (token.isEndOfFile()) {
     return stream << "<eof>\n";

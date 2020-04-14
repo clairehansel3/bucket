@@ -30,6 +30,16 @@
 #include <type_traits>
 #include <utility>
 
+#if defined(__clang__)
+  #if __has_feature(cxx_rtti)
+    #define RTTI_ENABLED
+  #endif
+#elif defined(__GNUG__)
+  #if defined(__GXX_RTTI)
+    #define RTTI_ENABLED
+  #endif
+#endif
+
 #ifdef BUCKET_DEBUG
 [[noreturn]] void bucket_assert_fail(const char* assertion, const char* file,
   unsigned line, const char* function);
@@ -54,7 +64,7 @@
 
 #ifdef BUCKET_DEBUG
   #define BUCKET_UNREACHABLE() BUCKET_ASSERT(false)
-#elif __GCC__ || __clang__
+#elif defined(__GCC__) || defined(__clang__)
   #define BUCKET_UNREACHABLE() __builtin_unreachable()
 #else
   #define BUCKET_UNREACHABLE()
