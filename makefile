@@ -1,18 +1,7 @@
 .PHONY: all build clean
 
-BUCKETSOURCES = .build/abstract_syntax_tree.o \
-								.build/code_generator.o \
-								.build/lexer.o \
-								.build/main.o \
-								.build/miscellaneous.o \
-								.build/parser.o \
-								.build/run_compiler.o \
-								.build/source_file.o \
-								.build/symbol_table.o \
-								.build/token.o
-
 FLAGS = -DNDEBUG -DBUCKET_EXCEPTION_STACKTRACE -std=c++17 -g -O0 \
-	-fsanitize=undefined,address -DBUCKET_DEBUG \
+ -DBUCKET_DEBUG \
 								-isystem $(shell llvm-config --includedir) \
 								-isystem /usr/local/include \
 								-Weverything -Wno-c++98-compat -Wno-padded \
@@ -36,6 +25,20 @@ BUILTINFLAGS = -std=c++17 -O3 -DBUCKET_BUILTIN_UBCKECK -Weverything -Wno-c++98-c
 -Wno-return-std-move-in-c++11 \
 -Wno-float-equal \
 -Wno-reserved-id-macro
+
+
+BUCKETSOURCES = .build/abstract_syntax_tree.o \
+								.build/code_generator.o \
+								.build/lexer.o \
+								.build/main.o \
+								.build/miscellaneous.o \
+								.build/parser.o \
+								.build/run_compiler.o \
+								.build/source_file.o \
+								.build/symbol_table.o \
+								.build/token.o \
+								.build/objects.o \
+								.build/garbage_collector.o
 
 all: build bucket libbuiltin.a
 
@@ -93,6 +96,14 @@ bucket: $(BUCKETSOURCES)
 .build/token.o: code/token.cxx
 	@ echo cxx token.cxx
 	@ /usr/bin/clang++ -fno-rtti $(FLAGS) -c code/token.cxx -o .build/token.o
+
+.build/objects.o: code/objects.cxx
+	@ echo cxx objects.cxx
+	@ /usr/bin/clang++ -fno-rtti $(FLAGS) -c code/objects.cxx -o .build/objects.o
+
+.build/garbage_collector.o: code/garbage_collector.cxx
+	@ echo cxx garbage_collector.cxx
+	@ /usr/bin/clang++ -fno-rtti $(FLAGS) -c code/garbage_collector.cxx -o .build/garbage_collector.o
 
 clean:
 	@ echo cln

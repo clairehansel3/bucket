@@ -10,7 +10,6 @@ namespace po = boost::program_options;
 int main(int argc, char* argv[])
 {
   try {
-    std::ios_base::sync_with_stdio(false);
     std::cin.exceptions(std::ios_base::badbit | std::ios_base::failbit);
     std::cout.exceptions(std::ios_base::badbit | std::ios_base::failbit);
     std::cerr.exceptions(std::ios_base::badbit | std::ios_base::failbit);

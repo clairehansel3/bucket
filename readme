@@ -1,2 +1,37 @@
-Bucket: It can compile something, but nothing as advanced as hello world.
-By Claire Hansel
+                   ___           ___           ___           ___
+    _____         /__/\         /  /\         /__/|         /  /\          ___
+   /  /::\        \  \:\       /  /:/        |  |:|        /  /:/_        /  /\
+  /  /:/\:\        \  \:\     /  /:/         |  |:|       /  /:/ /\      /  /:/
+ /  /:/~/::\   ___  \  \:\   /  /:/  ___   __|  |:|      /  /:/ /:/_    /  /:/
+/__/:/ /:/\:| /__/\  \__\:\ /__/:/  /  /\ /__/\_|:|____ /__/:/ /:/ /\  /  /::\
+\  \:\/:/~/:/ \  \:\ /  /:/ \  \:\ /  /:/ \  \:\/:::::/ \  \:\/:/ /:/ /__/:/\:\
+ \  \::/ /:/   \  \:\  /:/   \  \:\  /:/   \  \::/~~~~   \  \::/ /:/  \__\/  \:\
+  \  \:\/:/     \  \:\/:/     \  \:\/:/     \  \:\        \  \:\/:/        \  \:\
+   \  \::/       \  \::/       \  \::/       \  \:\        \  \::/          \__\/
+    \__\/         \__\/         \__\/         \__\/         \__\/
+
+*********************************************************************************
+*   2020, west of Los Angeles. A doomed side project by a nerdy gay kid. More   *
+*      than a compiler, less than an interpreter, it's trying to grow into      *
+*              something usable before the world ends. Send help.               *
+*                                                                               *
+* Solo software project debut by Claire Hansel, not fully painted in watercolor *
+*********************************************************************************
+
+What is Bucket?
+  Bucket is (supposedly) a compiled, object oriented programming language with
+  advanced features for compile time code execution and partial evaluation. It
+  can also refer to the Bucket compiler, which is an interpreter/LLVM frontend
+  written in C++17.
+
+What's the current status of Bucket?
+  Currently the compiler is able to compile simple programs which include
+  variable assignment, basic math, loops, conditionals, and function calls, but
+  not strings, pointers, user defined classes, or any standard library features.
+  The compile time object model isn't currently set up.
+
+Why is it called Bucket?
+  Watch a bad TV show called Terra Nova and that will answer your question.
+
+How can I contact you if I have further questions?
+  My email is clairehansel3@gmail.com

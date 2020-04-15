@@ -20,3 +20,4 @@ maybe make code generator safe for exceptions? make a class that takes a lambda
   and executes it on scope exit or something
 make assignment as expression work
 builtin write instead of printf
+make_error -> makeError

@@ -1,0 +1,5 @@
+Bucket is a compiled programming language similar to C or C++. However at compile
+time it is garbage collected and has a sophisticated, reflexive object model
+based on Ruby's. A full description of Ruby's object model can be found at
+www.atalon.cz/rb-om/ruby-object-model/. Bucket's compile time object model is
+described below:
