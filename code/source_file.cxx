@@ -113,8 +113,6 @@ void SourceFile::highlight(
   iterator range_begin,
   iterator range_end)
 {
-  BUCKET_ASSERT(range_begin != range_end);
-
   // print header
   auto [line, column] = getLineAndColumn(range_begin);
   stream << "file '" BUCKET_BOLD << m_path << BUCKET_BLACK "': starting from li"

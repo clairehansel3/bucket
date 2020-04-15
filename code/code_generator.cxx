@@ -501,6 +501,12 @@ void CodeGenerator::visit(ast::Method* ast_method)
   llvm::raw_string_ostream stream{error_message};
   if (llvm::verifyFunction(*m_current_method->m_llvm_function, &stream)) {
     #ifdef BUCKET_DEBUG
+    std::string name{"-"};
+    std::error_code error_code;
+    llvm::raw_fd_ostream ostream{llvm::StringRef(name.data(), name.size()), error_code};
+    m_module.print(ostream, nullptr);
+    if (error_code)
+      throw make_error<CodeGeneratorError>("unable to print IR to file: ", error_code.message());
     throw make_error<CodeGeneratorError>("failed to verify llvm function:\n",
       stream.str()
     );
@@ -542,7 +548,7 @@ void CodeGenerator::visit(ast::If* ast_if)
       "cycle");
 
   //
-  auto merge_block = llvm::BasicBlock::Create(m_context, "$merge",
+  auto merge_block = llvm::BasicBlock::Create(m_context, "$if_merge",
     m_current_method->m_llvm_function
   );
 
@@ -572,10 +578,10 @@ void CodeGenerator::visit(ast::If* ast_if)
 
     // Create labels for when the condition is true and false
     llvm::BasicBlock* then_block = llvm::BasicBlock::Create(m_context,
-      "$then", m_current_method->m_llvm_function
+      "$if_then", m_current_method->m_llvm_function
     );
     llvm::BasicBlock* else_block = llvm::BasicBlock::Create(m_context,
-      "$else", m_current_method->m_llvm_function
+      "$if_else", m_current_method->m_llvm_function
     );
 
     // Create a branch instruction
@@ -613,7 +619,6 @@ void CodeGenerator::visit(ast::If* ast_if)
   if (!m_after_jump)
     m_ir_builder.CreateBr(merge_block);
   m_after_jump = false;
-  m_ir_builder.CreateBr(merge_block);
 
   // Set the insert point to after the merge block and reset scope entry block
   m_ir_builder.SetInsertPoint(merge_block);
@@ -644,6 +649,8 @@ void CodeGenerator::visit(ast::InfiniteLoop* ast_infinite_loop)
   for (auto& ast_statement : ast_infinite_loop->body)
     ast::dispatch(ast_statement.get(), this);
   m_symbol_table.popScope();
+  if (!m_after_jump)
+    m_ir_builder.CreateBr(m_loop_entry_block);
   m_after_jump = false;
   m_ir_builder.SetInsertPoint(m_loop_merge_block);
   m_loop_merge_block = old_loop_merge_block;

@@ -219,7 +219,7 @@ static Token lex(SourceFile& source_file, SourceFile::iterator iter)
       else {
         symbol = Symbol::Equals;
       }
-      return Token::createSymbol(Symbol::Equals, begin, iter);
+      return Token::createSymbol(symbol, begin, iter);
     }
     case '!':
     {
@@ -232,7 +232,7 @@ static Token lex(SourceFile& source_file, SourceFile::iterator iter)
       else {
         symbol = Symbol::ExclamationPoint;
       }
-      return Token::createSymbol(Symbol::Equals, begin, iter);
+      return Token::createSymbol(symbol, begin, iter);
     }
     case '>':
     {
@@ -245,7 +245,7 @@ static Token lex(SourceFile& source_file, SourceFile::iterator iter)
       else {
         symbol = Symbol::Greater;
       }
-      return Token::createSymbol(Symbol::Equals, begin, iter);
+      return Token::createSymbol(symbol, begin, iter);
     }
     case '<':
     {
@@ -258,7 +258,7 @@ static Token lex(SourceFile& source_file, SourceFile::iterator iter)
       else {
         symbol = Symbol::Lesser;
       }
-      return Token::createSymbol(Symbol::Equals, begin, iter);
+      return Token::createSymbol(symbol, begin, iter);
     }
 
     // Comment or Slash Symbol

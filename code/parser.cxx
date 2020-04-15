@@ -693,7 +693,8 @@ bool Parser::accept(Symbol symbol)
 void Parser::expect(Keyword keyword)
 {
   if (!accept(keyword))
-    throw make_error<ParserError>("<todo>:" LINE_STRING);
+    throw make_error<ParserError>("expected keyword '", keyword2String(keyword),
+      "':\n", m_lexer.highlight(*m_token_iter));
 }
 
 void Parser::expect(Symbol symbol)
