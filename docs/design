@@ -1,0 +1,204 @@
+(1) Introduction to the Bucket Programming Language
+
+Bucket is a compiled programming language designed to be similar to C++ but
+with vastly simpler and more powerful compile time function execution and code
+generation. Additionally, Bucket is designed to have a self-consistent Ruby-like
+object model and be object oriented from the ground up without sacrificing
+runtime performance. Finally, Bucket irons out all the ugly kinks in C++ to
+create a much simpler and more beautiful language.
+
+(2) The Bucket Object Model
+
+Everything in Bucket is an object. An object has some sort of internal state as
+well as a class. The class has methods which can access the object's internal
+state. Bucket is similar to Ruby in that methods are first class. There are no
+functions,  and attributes and methods can alias.
+
+Bucket objects can contain two different kinds of internal state: runtime state
+and compile time state. It is impossible to have an object with purely runtime
+state as the class of the object is a piece of compile time state. Objects
+either have a mix or purely compile time state.
+
+(3) Three Layers of Bucket
+
+The Bucket implementation consists of three "layers": bktxx, bktct, and bktrt.
+bktrt.
+
+• bktxx
+This refers to the compiler runtime. It consists of hidden code and object data
+which is used by the comterpreter but not exposed in the Bucket compile time. An
+example of this is the way scopes are implemented, which is through objects
+which are not directly accessible from bktct.
+
+• bktct
+This refers to the Bucket compile time environemnt. Two objects which have
+different bktct classes may have the same bktxx class and two objects which have
+the same bktct class may have different bktxx classes. Classes/objects/methods
+may be either implemented in C++ within the compiler or be written in Bucket and
+imported as part of the standard library. Note that a method being written in
+C++ doesn't mean it's part of bktxx.
+
+• bktrt
+This is the runtime of a Bucket program that has been compiled into an
+executable. There is a Bucket runtime library written in C++ which is linked to
+every bucket executable which provides basic system calls and other operations.
+These subroutines are declared in bktct.
+
+(4) bktxx api
+
+Object
+  Class
+    CustomClass
+  Field
+  Method
+    BuiltinCTimeMethod
+    BuiltinRTimeMethod
+    TemplateMethod
+  Integer
+  Real
+  Byte
+  Bytes
+  Boolean
+  Character
+  String
+
+(5) bktct api
+
+Note: Overrided methods not explicitly specified.
+
+Object
+  .isinstance?(Class): Boolean
+  .is?(Object): Boolean
+  .class(): Class
+  .get(String): Object
+  .set(String, Object): Nil
+  .has?(String): Boolean
+  .isctime?: Boolean
+  .deepcopy(): Object
+  .isfield?: Boolean
+
+Class < Object
+  .issubclass?(Class): Boolean
+  .superclass(): Class or Nil
+  .getmethod(String): Method
+  .setmethod(String, Method): Nil
+  .hasmethod?(String): Boolean
+
+Method < Object
+  .is_simple?
+
+Integer < Object
+  .__add__
+  .__sub__
+  .__mul__
+  .__div__
+  .__idiv__
+  .__mod__
+  .__lt__
+  .__le__
+  .__eq__
+  .__ne__
+  .__gt__
+  .__ge__
+
+Real < Object
+  .__add__
+  .__sub__
+  .__mul__
+  .__div__
+  .__mod__
+  .__lt__
+  .__le__
+  .__eq__
+  .__ne__
+  .__gt__
+  .__ge__
+
+Byte < Object
+  .__eq__
+  .__neq__
+  .__and__
+  .__or__
+  .__xor__
+  .__not__
+  .__lshift__
+  .__rshift__
+
+Bytes < Object
+  .length
+  .__index__
+  .__eq__
+  .__ne__
+
+Boolean < Object
+  .__eq__
+  .__neq__
+  .__and__
+  .__or__
+  .__xor__
+  .__not__
+
+Character < Object
+  .__eq__
+  .__neq__
+
+String < Object
+  .length
+  .__index__
+  .__eq__
+  .__ne__
+
+Nil < Object
+  .__eq__
+  .__ne__
+
+List < Object
+  .append
+  .__eq__
+  .__ne__
+  .__index__
+
+Pointer<Class> < Object
+  .null?
+  .__eq__
+  .__ne__
+  .__add__
+  .__sub__
+
+(6) bktrt api
+
+(7) Dispatch
+
+In a purely compile time language, every method is run whenever it is called. In
+a purely runtime language, every method is run once (i.e. compiled), and then
+every call is simply an invocation of some compiled machine code. Our job is to
+find a middle ground where some methods are run every time and some are run
+once.
+
+This is done with the following algorithm:
+
+• resolve the correct method by looking at the inheritance chain. If it is a
+  method on a superclass then cast the object to that superclass.
+• If the method was declared with 'method':
+  • Look for an exact match: i.e. all of the ctime values compare equal and all
+    of the rtime values have the same type. If an exact match is found then
+    generate an invocation.
+  • If there is no match, then compile it and generate a signature. The
+    signature should contain a deepcopy of the ctime arguments.
+• If the method was declared with 'simple method'
+  • Compile it. Do not copy the ctime arguments.
+
+(8) Conditionals
+
+There is complexity introduced by code that looks like this:
+
+if <rtime>
+  x = 3
+  if x == 3:
+    ...
+  end
+else
+  x = 4
+end
+
+SOLUTION: lexical scoping for ctime and rtime

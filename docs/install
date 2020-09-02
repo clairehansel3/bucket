@@ -1,0 +1,20 @@
+(1) To compile this project, run `make`
+
+(2) This project has the following dependencies:
+boost
+utf8cpp
+llvm
+header file alloca.h (optional: see (3))
+
+(3) This project has the following build options:
+BUCKET_NO_ALLOCA          Set this flag if you are experiencing stack overflows
+                          or your system does not provide the function alloca().
+BUCKET_DEBUG              Compiles bucket in debug mode.
+NDEBUG                    Compiles bucket in production mode.
+BUCKET_HIGHLIGHTING_OFF   Turns off ANSI colors in error messages.
+
+(4) This project has the following system/compiler requirements:
+UNIX
+c++17 compliant compiler (gcc or clang recommended)
+
+(5) This code is highly experimental so don't expect it to build easily.

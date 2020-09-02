@@ -1,0 +1,101 @@
+program =
+  globals , end-of-file ;
+
+globals =
+  { global | newline } ;
+
+global =
+  class
+  | method
+  | field ;
+
+class =
+  "class" , identifier , newline , globals , "end" , newline ;
+
+method =
+  [ "simple" ] , "method" , identifier , "(" , identifier , ":" , expression ,
+  ")" , { "," , identifier , ":" , expression } , ")" , [ ":" , expression ] ,
+  newline , statements , "end" , newline ;
+
+field =
+  identifier , ":" , expression , newline ;
+
+statements =
+  { statement | newline } ;
+
+statement =
+  declaration
+  | if
+  | loop
+  | "break" , newline
+  | "cycle" , newline
+  | "ret" , [ expression ] , newline
+  | expression , newline ;
+
+declaration =
+  "decl" , identifier , ":" , expression , newline;
+
+if =
+  "if" , expression , newline , statements , { "elif" , expression , newline ,
+  statements } , [ "else" , newline , statements ] , "end" , newline ;
+
+loop =
+  "do" , newline , statements , "end" , newline
+  | "for" , expression , newline , statements , [ "else" , newline , statements ] , "end" , newline ;
+
+expression =
+  or-expression , [ "=" , expression ] ;
+
+
+or-expression =
+  and-expression , [ "or" , or-expression ] ;
+
+
+and-expression =
+  equality-expression , [ "and" , and-expression ] ;
+
+
+equality-expression =
+  comparison-expression , [ ( "!=" | "==" ) , comparison-expression ] ;
+
+
+comparison-expression =
+  arithmetic_expression , [ ( "<" | "<=" | ">" | ">=" ) , arithmetic_expression ] ;
+
+
+arithmetic_expression =
+  term , { ( "+" | "-" ) , term } ;
+
+term =
+  factor , { ( "*" | "/" | "%" ) , factor } ;
+
+
+factor =
+  exponent
+  | ( "+" | "-" | "not" | "*" | "&" ) , factor ;
+
+
+exponent =
+  postfix_expression , [ "^" , factor ] ;
+
+
+postfix-expression =
+  simple-expression , { method , call , index } ;
+
+
+method =
+  "." , identifier , [ call ] ;
+
+
+call =
+  "(" , [ expression , { "," , expression } ] , ")" ;
+
+
+index =
+  "[" , [ expression , { "," , expression } ] , "]" ;
+
+
+simple-expression =
+  identifier
+  | literal
+  | "(" , expression , ")" ;

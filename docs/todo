@@ -1,0 +1,12 @@
+Implement compile time hashing for string2Keyword and string2Symbol in token.cxx
+to prevent exit time destructors.
+
+Make tokens hold a reference to a SourceFile object, and make abstract syntax
+tree nodes hold tokens. This is so better highlighting can be done.
+
+Change 'assert' to 'BUCKET_ASSERT' which raises an exception. Similary change
+boost polymorphic_pointer_downcast to something that raises an exception.
+
+Change how the ast works at the top level: re-introduce the 'module' node.
+
+Make TreeTransform obsolete by making changes to the lexer
